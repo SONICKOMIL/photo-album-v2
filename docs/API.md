@@ -1,314 +1,273 @@
-# Livara REST API
+# Livara API
 
 **Project:** Livara
 
+**Document Type:** API Contract
+
+**Product Stage:** MVP
+
 **API Version:** v1
 
-**Architecture:** REST
+**Document Version:** 1.0
 
-**Backend:** NestJS
-
-**Format:** JSON
+> 🇷🇺
+> Этот документ определяет HTTP API Livara MVP.
+>
+> API реализует продуктовые правила, определённые в PRD, Architecture и Database.
+>
+> Клиент никогда не является источником истины для авторизации, ownership, Upload Window, Media state или других защищённых правил.
 
 ---
 
-# Overview
+# 1. API Goals
 
-The Livara API provides communication between client applications and the Livara backend.
+The Livara API must provide:
 
-It is responsible for:
-
-- Authentication
-- Authorization
+- Secure authenticated access for Organizer and Super Admin
+- Low-friction Guest Album access
+- Guest Sessions
 - Album management
-- Guest access
-- Upload windows
-- Media management
+- Upload Window management
+- Direct Media upload authorization
+- Media lifecycle management
+- Guest Gallery access
+- Organizer moderation
+- Downloads
+- Asynchronous Exports
 - Notifications
 - Administrative operations
+- Recovery operations
+- Audit access where authorized
 
-The API is designed to support the web application as well as future mobile applications and integrations.
+The API must remain predictable, versioned, and independent from frontend implementation details.
 
 ---
 
-# Base URL
+# 2. Base URL
 
-All API endpoints are versioned.
+All MVP endpoints use:
 
 ```text
 /api/v1
 ```
 
-Examples:
+Example:
 
 ```text
-/api/v1/auth/login
+GET /api/v1/albums/:albumId
+```
+
+Versioning allows future breaking API changes without silently changing existing clients.
+
+---
+
+# 3. API Areas
+
+The API is conceptually divided into:
+
+```text
+/api/v1/auth
 /api/v1/albums
-/api/v1/albums/:albumId/media
+/api/v1/guest
+/api/v1/media
+/api/v1/exports
+/api/v1/notifications
+/api/v1/admin
 ```
 
----
+Nested resources may be used where ownership is important.
 
-# API Principles
-
-The API follows these principles:
-
-- RESTful resource-oriented design
-- JSON request and response bodies
-- Consistent response structures
-- HTTP status codes
-- API versioning
-- Input validation
-- Role-based authorization
-- Pagination for large collections
-- Idempotency where required
-
----
-
-# Authentication
-
-Authenticated users include:
-
-- Super Admin
-- Organizer
-
-Guests do not require traditional accounts.
-
-Organizer and Super Admin authentication uses:
-
-- JWT Access Token
-- Refresh Token
-- HTTP-only secure cookies
-
-Guest access uses an anonymous guest session associated with an album.
-
----
-
-# Authorization
-
-Protected endpoints validate:
-
-1. Authentication
-2. User role
-3. Resource ownership
-4. Required permission
-
-For example, an Organizer may manage their own album but cannot access another Organizer's dashboard.
-
-Super Admin has platform-wide administrative access.
-
----
-
-# Content Type
-
-Standard API requests use:
+Example:
 
 ```text
-Content-Type: application/json
+/albums/:albumId/upload-windows
 ```
-
-Media uploads use an upload-specific flow rather than embedding binary files inside JSON.
 
 ---
 
-# Standard Success Response
+# 4. Actors
+
+The API recognizes three access contexts:
+
+```text
+SUPER_ADMIN
+ORGANIZER
+GUEST
+```
+
+### SUPER_ADMIN
+
+Platform-level authenticated User.
+
+### ORGANIZER
+
+Authenticated User with access to assigned Albums.
+
+### GUEST
+
+Guest Session scoped to an Album.
+
+Guest is not authenticated through the normal User login flow.
+
+---
+
+# 5. Authorization Principle
+
+Every protected endpoint must perform server-side authorization.
+
+The client must never decide:
+
+```text
+I am Super Admin
+I own this Album
+This Upload Window is active
+This Media belongs to me
+This Album is available
+This file is safe
+```
+
+Resource IDs do not grant access.
+
+---
+
+# 6. Standard Response Format
+
+Successful responses should use a consistent structure.
+
+Example:
 
 ```json
 {
   "success": true,
-  "data": {},
-  "meta": {}
-}
-```
-
-The `meta` property may be omitted when no additional metadata is required.
-
----
-
-# Standard Error Response
-
-```json
-{
-  "success": false,
-  "error": {
-    "code": "ALBUM_NOT_FOUND",
-    "message": "Album not found."
+  "data": {
+    "id": "..."
   }
 }
 ```
 
-Development environments may include additional debugging information.
-
-Production responses must never expose stack traces, database errors, secrets, or internal implementation details.
-
----
-
-# HTTP Status Codes
-
-| Status | Usage |
-|---|---|
-| 200 | Request completed successfully |
-| 201 | Resource created successfully |
-| 204 | Request succeeded with no response body |
-| 400 | Invalid request |
-| 401 | Authentication required or invalid |
-| 403 | User does not have permission |
-| 404 | Resource not found |
-| 409 | Resource conflict |
-| 413 | Upload exceeds allowed size |
-| 415 | Unsupported media type |
-| 422 | Valid request format but invalid business data |
-| 429 | Rate limit exceeded |
-| 500 | Unexpected server error |
-| 503 | Service temporarily unavailable |
-
----
-
-# Pagination
-
-Large collections must use pagination.
-
-Examples include:
-
-- Gallery media
-- Albums
-- Guests
-- Notifications
-- Admin lists
-
-Cursor-based pagination is preferred for large and frequently changing datasets such as gallery media.
-
-Example request:
-
-```text
-GET /api/v1/albums/:albumId/media?limit=50&cursor=...
-```
-
-Example response metadata:
+Responses containing pagination may additionally contain:
 
 ```json
 {
   "success": true,
   "data": [],
-  "meta": {
-    "nextCursor": "...",
-    "hasMore": true
+  "pagination": {
+    "nextCursor": "..."
   }
 }
 ```
 
 ---
 
-# Filtering and Sorting
+# 7. Error Format
 
-Collection endpoints may support:
+Errors use a stable structure:
 
-```text
-?type=IMAGE
-?status=READY
-?sort=uploadedAt
-?order=desc
+```json
+{
+  "success": false,
+  "error": {
+    "code": "UPLOAD_WINDOW_CLOSED",
+    "message": "Uploads are not available right now."
+  }
+}
 ```
 
-Available filters depend on the resource.
+Optional safe details may be included:
 
-The server must validate all filtering and sorting parameters.
-
----
-
-# Dates and Time
-
-All API timestamps use UTC and ISO 8601.
-
-Example:
-
-```text
-2026-07-26T18:30:00.000Z
+```json
+{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "The request contains invalid fields.",
+    "details": {
+      "field": "startsAt"
+    }
+  }
+}
 ```
 
-Clients are responsible for displaying timestamps in the appropriate local timezone.
-
-Upload Window schedules are stored and processed using UTC timestamps.
+Internal stack traces, SQL errors, R2 credentials, and infrastructure details must never be returned.
 
 ---
 
-# IDs
+# 8. HTTP Status Codes
 
-Resources use UUID identifiers.
-
-Examples:
+Typical usage:
 
 ```text
-albumId
-mediaId
-guestId
-uploadWindowId
+200 OK
+201 Created
+202 Accepted
+204 No Content
+
+400 Bad Request
+401 Unauthorized
+403 Forbidden
+404 Not Found
+409 Conflict
+413 Payload Too Large
+415 Unsupported Media Type
+422 Unprocessable Entity
+429 Too Many Requests
+
+500 Internal Server Error
+503 Service Unavailable
 ```
 
-Public URLs should not expose sequential database identifiers.
+Exact status selection should remain consistent across modules.
 
 ---
 
-# Rate Limiting
+# 9. Validation
 
-Rate limits apply to sensitive and public endpoints, including:
+All external input must be validated by the backend.
 
-- Authentication
-- Guest session creation
-- Media upload initialization
-- Public album access
-- Administrative operations
+This includes:
 
-Rate limits may vary by endpoint and user type.
+```text
+Request body
+Path parameters
+Query parameters
+Pagination cursors
+Public identifiers
+File metadata
+Dates
+Timezone values
+```
 
----
-
-# API Modules
-
-The API is divided into the following modules:
-
-- Auth
-- Albums
-- Guests
-- Upload Windows
-- Media
-- Notifications
-- Admin
-- Health
-
-Each module defines its own endpoints, permissions, request schemas, responses, and error codes.
+Unknown or protected fields should not silently become writable.
 
 ---
 
-# Auth API
+# 10. Authentication
 
-## Overview
+Organizer and Super Admin use authenticated User Sessions.
 
-The Auth API handles authentication and session management for authenticated Livara users.
+Recommended model:
 
-Authenticated users are:
+```text
+Access Token
++
+Refresh Session
+```
 
-- Super Admin
-- Organizer
+Access tokens are short-lived.
 
-Guests do not use this authentication flow.
+Refresh credentials are associated with persistent `Session` records.
 
-The authentication system uses short-lived JWT access tokens and long-lived refresh tokens.
-
-Refresh tokens are stored in secure HTTP-only cookies and are never exposed to client-side JavaScript.
+Raw refresh tokens must never be stored in PostgreSQL.
 
 ---
 
-## POST /auth/login
+# 11. Login
 
-Authenticates an Organizer or Super Admin.
-
-### Request
-
-```http
+```text
 POST /api/v1/auth/login
-Content-Type: application/json
 ```
+
+Request:
 
 ```json
 {
@@ -317,1837 +276,581 @@ Content-Type: application/json
 }
 ```
 
-### Validation
-
-The server shall:
-
-- Validate the email format.
-- Require a password.
-- Verify that the user exists.
-- Verify the password hash.
-- Verify that the account is active.
-- Reject soft-deleted users.
-
-### Success Response
+Success:
 
 ```json
 {
   "success": true,
   "data": {
     "user": {
-      "id": "uuid",
+      "id": "...",
       "email": "organizer@example.com",
-      "firstName": "John",
-      "lastName": "Doe",
-      "role": "ORGANIZER"
+      "role": "ORGANIZER",
+      "status": "ACTIVE"
     }
   }
 }
 ```
 
-The server also creates:
+Refresh/session credentials should be delivered using the chosen secure authentication mechanism rather than exposed unnecessarily in JSON.
 
-- Access Token
-- Refresh Token
-- Session
-
-Authentication cookies are returned using secure HTTP-only cookies.
-
-### Errors
+Possible errors:
 
 ```text
-400 INVALID_REQUEST
-401 INVALID_CREDENTIALS
-403 ACCOUNT_DISABLED
-429 TOO_MANY_ATTEMPTS
+INVALID_CREDENTIALS
+ACCOUNT_SUSPENDED
 ```
-
-The API must not reveal whether an email address exists.
 
 ---
 
-## POST /auth/refresh
+# 12. Refresh Authentication
 
-Issues a new access token using a valid refresh token.
-
-### Request
-
-```http
+```text
 POST /api/v1/auth/refresh
 ```
 
-The refresh token is read from an HTTP-only cookie.
+The backend validates the refresh credential against the persistent Session.
 
-No refresh token is accepted from the request body.
+Success returns renewed authentication state according to implementation.
 
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "refreshed": true
-  }
-}
-```
-
-### Behavior
-
-The server shall:
-
-- Validate the refresh token.
-- Verify the associated session.
-- Verify that the user is active.
-- Reject expired tokens.
-- Reject revoked tokens.
-- Rotate the refresh token.
-
-The previous refresh token becomes invalid after successful rotation.
-
-### Errors
+Possible errors:
 
 ```text
-401 REFRESH_TOKEN_INVALID
-401 REFRESH_TOKEN_EXPIRED
-401 SESSION_EXPIRED
-403 ACCOUNT_DISABLED
+SESSION_INVALID
+SESSION_EXPIRED
+SESSION_REVOKED
 ```
 
 ---
 
-## POST /auth/logout
+# 13. Current User
 
-Terminates the current authenticated session.
-
-### Request
-
-```http
-POST /api/v1/auth/logout
-```
-
-### Behavior
-
-The server shall:
-
-- Revoke the current refresh token.
-- Invalidate the current session.
-- Clear authentication cookies.
-
-### Success Response
-
-```http
-204 No Content
-```
-
-Calling logout multiple times should remain safe and should not create an error if the session has already ended.
-
----
-
-## POST /auth/logout-all
-
-Terminates all active sessions belonging to the authenticated user.
-
-### Request
-
-```http
-POST /api/v1/auth/logout-all
-```
-
-Authentication required.
-
-### Behavior
-
-The server shall:
-
-- Revoke all refresh tokens belonging to the user.
-- Invalidate all active sessions.
-- Keep the current account active.
-
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "sessionsRevoked": true
-  }
-}
-```
-
----
-
-## GET /auth/me
-
-Returns information about the currently authenticated user.
-
-### Request
-
-```http
+```text
 GET /api/v1/auth/me
 ```
 
-Authentication required.
-
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": "uuid",
-    "email": "organizer@example.com",
-    "firstName": "John",
-    "lastName": "Doe",
-    "role": "ORGANIZER",
-    "avatarUrl": null
-  }
-}
-```
-
-### Errors
+Requires:
 
 ```text
-401 UNAUTHENTICATED
-403 ACCOUNT_DISABLED
+SUPER_ADMIN or ORGANIZER
 ```
 
----
+Returns safe User information.
 
-# Authentication Cookies
-
-Authentication cookies shall use:
+Never returns:
 
 ```text
-HttpOnly
-Secure
-SameSite
+passwordHash
+refreshTokenHash
 ```
 
-Cookie configuration may differ between development and production environments.
-
-Refresh tokens must never be stored in:
-
-- localStorage
-- sessionStorage
-- client-side application state
-
 ---
 
-# Password Security
-
-Passwords shall never be stored in plain text.
-
-The backend shall:
-
-- Hash passwords using a modern password hashing algorithm.
-- Apply rate limiting to login attempts.
-- Never return password hashes through the API.
-- Never log passwords.
-- Never include passwords in authentication errors.
-
----
-
-# Session Management
-
-Every successful login creates a server-side Session record.
-
-A session may contain:
-
-- Session ID
-- User ID
-- IP address
-- User agent
-- Creation time
-- Expiration time
-
-Users may have multiple active sessions across different devices.
-
-Super Admins may revoke user sessions when required.
-
----
-
-# Auth Authorization Matrix
-
-| Endpoint | Guest | Organizer | Super Admin |
-|---|:---:|:---:|:---:|
-| POST /auth/login | ✓ | ✓ | ✓ |
-| POST /auth/refresh | — | ✓ | ✓ |
-| POST /auth/logout | — | ✓ | ✓ |
-| POST /auth/logout-all | — | ✓ | ✓ |
-| GET /auth/me | — | ✓ | ✓ |
-
-`POST /auth/login` is publicly accessible, but only Organizer and Super Admin accounts can authenticate through it.
-
----
-
-# Auth Acceptance Criteria
-
-Authentication is complete when:
-
-- Organizer can log in.
-- Super Admin can log in.
-- Invalid credentials are rejected.
-- Access tokens can expire without forcing a new login while the refresh session remains valid.
-- Refresh tokens are rotated securely.
-- Logout invalidates the current session.
-- Logout All invalidates all user sessions.
-- Protected endpoints reject unauthenticated requests.
-- Disabled or deleted accounts cannot authenticate.
-- Passwords and authentication secrets are never exposed to the client.---
-
-# Auth API
-
-## Overview
-
-The Auth API handles authentication and session management for authenticated Livara users.
-
-Authenticated users are:
-
-- Super Admin
-- Organizer
-
-Guests do not use this authentication flow.
-
-The authentication system uses short-lived JWT access tokens and long-lived refresh tokens.
-
-Refresh tokens are stored in secure HTTP-only cookies and are never exposed to client-side JavaScript.
-
----
-
-## POST /auth/login
-
-Authenticates an Organizer or Super Admin.
-
-### Request
-
-```http
-POST /api/v1/auth/login
-Content-Type: application/json
-```
-
-```json
-{
-  "email": "organizer@example.com",
-  "password": "password"
-}
-```
-
-### Validation
-
-The server shall:
-
-- Validate the email format.
-- Require a password.
-- Verify that the user exists.
-- Verify the password hash.
-- Verify that the account is active.
-- Reject soft-deleted users.
-
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "user": {
-      "id": "uuid",
-      "email": "organizer@example.com",
-      "firstName": "John",
-      "lastName": "Doe",
-      "role": "ORGANIZER"
-    }
-  }
-}
-```
-
-The server also creates:
-
-- Access Token
-- Refresh Token
-- Session
-
-Authentication cookies are returned using secure HTTP-only cookies.
-
-### Errors
+# 14. Logout
 
 ```text
-400 INVALID_REQUEST
-401 INVALID_CREDENTIALS
-403 ACCOUNT_DISABLED
-429 TOO_MANY_ATTEMPTS
-```
-
-The API must not reveal whether an email address exists.
-
----
-
-## POST /auth/refresh
-
-Issues a new access token using a valid refresh token.
-
-### Request
-
-```http
-POST /api/v1/auth/refresh
-```
-
-The refresh token is read from an HTTP-only cookie.
-
-No refresh token is accepted from the request body.
-
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "refreshed": true
-  }
-}
-```
-
-### Behavior
-
-The server shall:
-
-- Validate the refresh token.
-- Verify the associated session.
-- Verify that the user is active.
-- Reject expired tokens.
-- Reject revoked tokens.
-- Rotate the refresh token.
-
-The previous refresh token becomes invalid after successful rotation.
-
-### Errors
-
-```text
-401 REFRESH_TOKEN_INVALID
-401 REFRESH_TOKEN_EXPIRED
-401 SESSION_EXPIRED
-403 ACCOUNT_DISABLED
-```
-
----
-
-## POST /auth/logout
-
-Terminates the current authenticated session.
-
-### Request
-
-```http
 POST /api/v1/auth/logout
 ```
 
-### Behavior
+Revokes the current Session.
 
-The server shall:
+Success:
 
-- Revoke the current refresh token.
-- Invalidate the current session.
-- Clear authentication cookies.
-
-### Success Response
-
-```http
+```text
 204 No Content
 ```
 
-Calling logout multiple times should remain safe and should not create an error if the session has already ended.
-
 ---
 
-## POST /auth/logout-all
+# 15. Logout All
 
-Terminates all active sessions belonging to the authenticated user.
-
-### Request
-
-```http
+```text
 POST /api/v1/auth/logout-all
 ```
 
-Authentication required.
+Revokes active Sessions for the authenticated User.
 
-### Behavior
-
-The server shall:
-
-- Revoke all refresh tokens belonging to the user.
-- Invalidate all active sessions.
-- Keep the current account active.
-
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "sessionsRevoked": true
-  }
-}
-```
-
----
-
-## GET /auth/me
-
-Returns information about the currently authenticated user.
-
-### Request
-
-```http
-GET /api/v1/auth/me
-```
-
-Authentication required.
-
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": "uuid",
-    "email": "organizer@example.com",
-    "firstName": "John",
-    "lastName": "Doe",
-    "role": "ORGANIZER",
-    "avatarUrl": null
-  }
-}
-```
-
-### Errors
+Success:
 
 ```text
-401 UNAUTHENTICATED
-403 ACCOUNT_DISABLED
+204 No Content
 ```
 
 ---
 
-# Authentication Cookies
-
-Authentication cookies shall use:
+# 16. Organizer Album List
 
 ```text
-HttpOnly
-Secure
-SameSite
+GET /api/v1/albums
 ```
 
-Cookie configuration may differ between development and production environments.
-
-Refresh tokens must never be stored in:
-
-- localStorage
-- sessionStorage
-- client-side application state
-
----
-
-# Password Security
-
-Passwords shall never be stored in plain text.
-
-The backend shall:
-
-- Hash passwords using a modern password hashing algorithm.
-- Apply rate limiting to login attempts.
-- Never return password hashes through the API.
-- Never log passwords.
-- Never include passwords in authentication errors.
-
----
-
-# Session Management
-
-Every successful login creates a server-side Session record.
-
-A session may contain:
-
-- Session ID
-- User ID
-- IP address
-- User agent
-- Creation time
-- Expiration time
-
-Users may have multiple active sessions across different devices.
-
-Super Admins may revoke user sessions when required.
-
----
-
-# Auth Authorization Matrix
-
-| Endpoint | Guest | Organizer | Super Admin |
-|---|:---:|:---:|:---:|
-| POST /auth/login | ✓ | ✓ | ✓ |
-| POST /auth/refresh | — | ✓ | ✓ |
-| POST /auth/logout | — | ✓ | ✓ |
-| POST /auth/logout-all | — | ✓ | ✓ |
-| GET /auth/me | — | ✓ | ✓ |
-
-`POST /auth/login` is publicly accessible, but only Organizer and Super Admin accounts can authenticate through it.
-
----
-
-# Auth Acceptance Criteria
-
-Authentication is complete when:
-
-- Organizer can log in.
-- Super Admin can log in.
-- Invalid credentials are rejected.
-- Access tokens can expire without forcing a new login while the refresh session remains valid.
-- Refresh tokens are rotated securely.
-- Logout invalidates the current session.
-- Logout All invalidates all user sessions.
-- Protected endpoints reject unauthenticated requests.
-- Disabled or deleted accounts cannot authenticate.
-- Passwords and authentication secrets are never exposed to the client.
-
----
-
-# Albums API
-
-## Overview
-
-The Albums API manages the lifecycle and configuration of Livara event albums.
-
-Albums are created and assigned by Super Admins.
-
-Organizers can manage permitted album settings and content, but protected event information can only be changed by a Super Admin.
-
-Guests access albums through separate public endpoints.
-
----
-
-# POST /albums
-
-Creates a new album.
-
-### Permission
-
-Super Admin only.
-
-### Request
-
-```http
-POST /api/v1/albums
-Content-Type: application/json
-```
-
-```json
-{
-  "organizerId": "uuid",
-  "title": "Aziz & Malika",
-  "eventDate": "2026-09-12T15:00:00.000Z",
-  "location": "Samarkand, Uzbekistan"
-}
-```
-
-### Behavior
-
-The server shall:
-
-- Validate the Organizer.
-- Create a unique Album ID.
-- Generate a unique public slug.
-- Create default album settings.
-- Set the initial album status.
-- Record creation timestamps.
-
-QR generation may use the generated public album URL.
-
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": "uuid",
-    "organizerId": "uuid",
-    "title": "Aziz & Malika",
-    "eventDate": "2026-09-12T15:00:00.000Z",
-    "location": "Samarkand, Uzbekistan",
-    "status": "DRAFT",
-    "publicSlug": "aziz-malika-x7k29p",
-    "createdAt": "2026-07-26T18:30:00.000Z"
-  }
-}
-```
-
-### Errors
+Requires:
 
 ```text
-400 INVALID_REQUEST
-404 ORGANIZER_NOT_FOUND
-409 PUBLIC_SLUG_CONFLICT
+ORGANIZER
 ```
+
+Returns only Albums assigned to the authenticated Organizer.
+
+Super Admin platform-wide Album listing belongs under Admin endpoints.
 
 ---
 
-# GET /albums
-
-Returns albums accessible to the authenticated user.
-
-### Permission
-
-Organizer or Super Admin.
-
-### Behavior
-
-For Organizer:
-
-- Return only albums assigned to that Organizer.
-
-For Super Admin:
-
-- Return albums across the platform.
-
-### Query Parameters
+# 17. Organizer Album Details
 
 ```text
-?status=ACTIVE
-?limit=20
-?cursor=...
-```
-
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": "uuid",
-      "title": "Aziz & Malika",
-      "eventDate": "2026-09-12T15:00:00.000Z",
-      "status": "ACTIVE",
-      "coverMediaId": null
-    }
-  ],
-  "meta": {
-    "nextCursor": null,
-    "hasMore": false
-  }
-}
-```
-
----
-
-# GET /albums/:albumId
-
-Returns detailed information about an album.
-
-### Permission
-
-Organizer owning the album or Super Admin.
-
-### Request
-
-```http
 GET /api/v1/albums/:albumId
 ```
 
-### Success Response
+Requires:
+
+```text
+ORGANIZER
+```
+
+Backend verifies:
+
+```text
+album.organizerId = authenticatedUser.id
+AND
+album.deletedAt IS NULL
+```
+
+Example response:
 
 ```json
 {
   "success": true,
   "data": {
-    "id": "uuid",
-    "organizerId": "uuid",
+    "id": "...",
     "title": "Aziz & Malika",
-    "description": null,
-    "eventDate": "2026-09-12T15:00:00.000Z",
-    "location": "Samarkand, Uzbekistan",
+    "eventDate": "2026-09-12T00:00:00.000Z",
+    "timezone": "Asia/Tashkent",
     "status": "ACTIVE",
-    "publicSlug": "aziz-malika-x7k29p",
-    "coverMediaId": null,
-    "uploadsEnabled": true,
-    "downloadsEnabled": true
+    "publicIdentifier": "...",
+    "canUploadNow": true
   }
 }
 ```
 
-### Errors
+`canUploadNow` may be derived for convenience.
+
+It is not stored as authoritative Album state.
+
+---
+
+# 18. Organizer Album Updates
+
+Organizer must not receive a generic endpoint capable of changing protected fields.
+
+Protected fields:
 
 ```text
-403 ALBUM_ACCESS_DENIED
-404 ALBUM_NOT_FOUND
+title
+eventDate
+organizerId
+publicIdentifier
 ```
 
----
-
-# PATCH /albums/:albumId
-
-Updates album configuration.
-
-### Permission
-
-Organizer owning the album or Super Admin.
-
-The server must apply field-level permissions based on the user's role.
-
----
-
-## Organizer Editable Fields
-
-Organizer may update:
-
-```json
-{
-  "description": "Welcome to our wedding album!",
-  "coverMediaId": "uuid",
-  "downloadsEnabled": true
-}
-```
-
-Organizer cannot directly modify protected event information such as:
-
-- title
-- eventDate
-- organizerId
-- publicSlug
-- album ownership
-
-Upload availability is managed through Upload Windows rather than by changing event information.
-
----
-
-## Super Admin Editable Fields
-
-Super Admin may additionally update:
-
-```json
-{
-  "title": "Aziz & Malika",
-  "eventDate": "2026-09-13T15:00:00.000Z",
-  "location": "Samarkand, Uzbekistan"
-}
-```
-
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": "uuid",
-    "title": "Aziz & Malika",
-    "updatedAt": "2026-07-26T19:00:00.000Z"
-  }
-}
-```
-
-### Errors
+Therefore a request such as:
 
 ```text
-400 INVALID_REQUEST
-403 FIELD_UPDATE_NOT_ALLOWED
-404 ALBUM_NOT_FOUND
-409 INVALID_ALBUM_STATE
+PATCH /albums/:albumId
 ```
 
----
+must not allow these fields for Organizer.
 
-# POST /albums/:albumId/archive
+Organizer-editable settings should use explicitly permitted DTO fields or dedicated endpoints.
 
-Archives an album.
-
-### Permission
-
-Organizer owning the album or Super Admin.
-
-### Behavior
-
-The server shall:
-
-- Change the album status to ARCHIVED.
-- Prevent new guest uploads.
-- Preserve existing media.
-- Preserve gallery access according to privacy settings.
-- Close or cancel future upload activity according to business rules.
-
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": "uuid",
-    "status": "ARCHIVED"
-  }
-}
-```
+> 🇷🇺
+> Мы не принимаем весь Album object и потом не надеемся, что frontend не отправит `eventDate`.
+>
+> Backend DTO сам определяет, какие поля Organizer вообще разрешено изменять.
 
 ---
 
-# POST /albums/:albumId/restore
-
-Restores an archived album.
-
-### Permission
-
-Super Admin only.
-
-### Behavior
-
-Restoring the album does not automatically reopen uploads.
-
-Upload Windows must be configured separately.
-
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": "uuid",
-    "status": "READY"
-  }
-}
-```
-
----
-
-# DELETE /albums/:albumId
-
-Soft deletes an album.
-
-### Permission
-
-Super Admin only.
-
-### Behavior
-
-The server shall:
-
-- Set deletedAt.
-- Remove the album from normal queries.
-- Disable public access.
-- Prevent uploads.
-- Preserve data during the configured recovery period.
-
-Media objects must not be immediately permanently deleted from storage.
-
-### Success Response
-
-```http
-204 No Content
-```
-
----
-
-# GET /albums/:albumId/stats
-
-Returns album statistics.
-
-### Permission
-
-Organizer owning the album or Super Admin.
-
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "photos": 843,
-    "videos": 71,
-    "totalMedia": 914,
-    "guests": 126,
-    "storageBytes": 12884901888,
-    "lastUploadAt": "2026-09-12T21:42:17.000Z",
-    "activeUploadWindow": {
-      "id": "uuid",
-      "title": "Wedding Day"
-    }
-  }
-}
-```
-
----
-
-# Albums Authorization Matrix
-
-| Endpoint | Guest | Organizer | Super Admin |
-|---|:---:|:---:|:---:|
-| POST /albums | — | — | ✓ |
-| GET /albums | — | Own | ✓ |
-| GET /albums/:albumId | — | Own | ✓ |
-| PATCH /albums/:albumId | — | Limited | ✓ |
-| POST /albums/:albumId/archive | — | Own | ✓ |
-| POST /albums/:albumId/restore | — | — | ✓ |
-| DELETE /albums/:albumId | — | — | ✓ |
-| GET /albums/:albumId/stats | — | Own | ✓ |
-
----
-
-# Albums Acceptance Criteria
-
-The Albums API is complete when:
-
-- Super Admin can create albums.
-- Albums can be assigned to Organizers.
-- Organizer can access only assigned albums.
-- Super Admin can access all albums.
-- Organizer cannot change protected event information.
-- Super Admin can change protected event information.
-- Albums can be archived without deleting their media.
-- Super Admin can restore archived albums.
-- Album deletion uses soft delete.
-- Deleted albums cannot be accessed publicly.
-- Album statistics are available to authorized users.
-
----
-
-# Guest Access API
-
-## Overview
-
-The Guest Access API provides frictionless access to public Livara albums without requiring account registration.
-
-Guests enter an album through:
-
-- QR Code
-- Public album link
-
-A guest receives an anonymous session associated with the specific album.
-
-Guest sessions are separate from Organizer and Super Admin authentication.
-
----
-
-# GET /public/albums/:slug
-
-Returns public information required to open an album.
-
-### Permission
-
-Public.
-
-Authentication is not required.
-
-### Request
-
-```http
-GET /api/v1/public/albums/:slug
-```
-
-### Behavior
-
-The server shall:
-
-- Find the album by public slug.
-- Verify that the album exists.
-- Reject soft-deleted albums.
-- Check album availability.
-- Return only public album information.
-- Never expose Organizer private information.
-
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": "uuid",
-    "title": "Aziz & Malika",
-    "description": "Welcome to our wedding album!",
-    "eventDate": "2026-09-12T15:00:00.000Z",
-    "location": "Samarkand, Uzbekistan",
-    "cover": {
-      "url": "https://media.example.com/..."
-    },
-    "status": "ACTIVE",
-    "uploadsAvailable": true,
-    "downloadsAvailable": false
-  }
-}
-```
-
-### Errors
+# 19. Organizer Album Overview
 
 ```text
-404 ALBUM_NOT_FOUND
-410 ALBUM_UNAVAILABLE
+GET /api/v1/albums/:albumId/overview
 ```
 
----
+Requires Album ownership.
 
-# POST /public/albums/:slug/guests
-
-Creates or restores an anonymous Guest session for the album.
-
-### Permission
-
-Public.
-
-### Request
-
-```http
-POST /api/v1/public/albums/:slug/guests
-Content-Type: application/json
-```
-
-Optional:
-
-```json
-{
-  "displayName": "Komiljon"
-}
-```
-
-The request may contain no body when guest names are optional.
-
----
-
-## Behavior
-
-The server shall:
-
-- Verify the album.
-- Check whether a valid guest session already exists.
-- Reuse the existing Guest when possible.
-- Otherwise create a new Guest record.
-- Associate the Guest with the current Album.
-- Generate a secure guest session.
-- Return only non-sensitive Guest information.
-
-A Guest session belongs to one album.
-
-Access to Album A must not automatically grant access to Album B.
-
----
-
-## Success Response
+May return:
 
 ```json
 {
   "success": true,
   "data": {
-    "guest": {
-      "id": "uuid",
-      "displayName": "Komiljon"
-    },
-    "album": {
-      "id": "uuid",
-      "publicSlug": "aziz-malika-x7k29p"
-    }
+    "mediaCount": 428,
+    "imageCount": 391,
+    "videoCount": 37,
+    "guestCount": 126,
+    "canUploadNow": false,
+    "activeUploadWindow": null
   }
 }
 ```
 
-The guest session identifier should be stored in a secure cookie where practical.
-
-Raw guest session tokens must not be returned in normal API responses.
+Statistics may evolve without changing core resources.
 
 ---
 
-# GET /public/albums/:slug/guest
-
-Returns the current Guest associated with this album and device session.
-
-### Permission
-
-Guest session required.
-
-### Request
-
-```http
-GET /api/v1/public/albums/:slug/guest
-```
-
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": "uuid",
-    "displayName": "Komiljon",
-    "createdAt": "2026-09-12T14:32:00.000Z"
-  }
-}
-```
-
-### Errors
+# 20. Upload Window List
 
 ```text
-401 GUEST_SESSION_REQUIRED
-404 GUEST_NOT_FOUND
-```
-
----
-
-# PATCH /public/albums/:slug/guest
-
-Updates allowed Guest information.
-
-### Permission
-
-Guest session required.
-
-### Request
-
-```http
-PATCH /api/v1/public/albums/:slug/guest
-Content-Type: application/json
-```
-
-```json
-{
-  "displayName": "Komiljon"
-}
-```
-
-### Behavior
-
-The server shall:
-
-- Verify the Guest session.
-- Verify that the Guest belongs to the requested album.
-- Validate the display name.
-- Update only fields available to Guests.
-
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": "uuid",
-    "displayName": "Komiljon"
-  }
-}
-```
-
----
-
-# GET /public/albums/:slug/access
-
-Returns the current public capabilities of an album.
-
-This endpoint allows the frontend to determine which actions are currently available.
-
-### Permission
-
-Public.
-
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "canView": true,
-    "canUpload": true,
-    "canDownload": false,
-    "guestNameRequired": false,
-    "activeUploadWindow": {
-      "id": "uuid",
-      "title": "Wedding Day",
-      "startsAt": "2026-09-12T10:00:00.000Z",
-      "endsAt": "2026-09-13T01:00:00.000Z"
-    },
-    "nextUploadWindow": null
-  }
-}
-```
-
-When uploads are closed but another Upload Window exists:
-
-```json
-{
-  "success": true,
-  "data": {
-    "canView": true,
-    "canUpload": false,
-    "canDownload": false,
-    "guestNameRequired": false,
-    "activeUploadWindow": null,
-    "nextUploadWindow": {
-      "id": "uuid",
-      "title": "Chilla",
-      "startsAt": "2026-09-19T16:00:00.000Z",
-      "endsAt": "2026-09-19T22:00:00.000Z"
-    }
-  }
-}
-```
-
-This allows the interface to display messages such as:
-
-```text
-Uploads are currently closed.
-
-Next upload period:
-Chilla — September 19
-```
-
-without making the album itself unavailable.
-
----
-
-# Guest Session Security
-
-Guest sessions shall:
-
-- Use cryptographically secure identifiers.
-- Be scoped to a specific album.
-- Expire according to configured policy.
-- Never grant Organizer permissions.
-- Never grant Super Admin permissions.
-- Be revocable by the system.
-
-The server must never trust a Guest ID supplied by the client without validating the associated session.
-
----
-
-# Guest Privacy
-
-Livara should minimize personal data collected from Guests.
-
-Guest accounts do not require:
-
-- Email
-- Password
-- Phone number
-
-Optional information may include:
-
-- Display name
-
-IP addresses and user-agent information may be processed for security and abuse prevention according to the platform privacy policy.
-
----
-
-# Guest Access Authorization Matrix
-
-| Endpoint | Anonymous | Guest Session | Organizer | Super Admin |
-|---|:---:|:---:|:---:|:---:|
-| GET /public/albums/:slug | ✓ | ✓ | ✓ | ✓ |
-| POST /public/albums/:slug/guests | ✓ | ✓ | ✓ | ✓ |
-| GET /public/albums/:slug/guest | — | ✓ | — | — |
-| PATCH /public/albums/:slug/guest | — | ✓ | — | — |
-| GET /public/albums/:slug/access | ✓ | ✓ | ✓ | ✓ |
-
----
-
-# Guest Access Acceptance Criteria
-
-The Guest Access API is complete when:
-
-- A QR Code can open the correct public album.
-- No account registration is required.
-- A new visitor can receive an anonymous Guest session.
-- A returning visitor can reuse their existing Guest session.
-- Guest sessions are isolated between albums.
-- Guests cannot access Organizer or Super Admin functionality.
-- Public responses do not expose private user information.
-- An album remains viewable when uploads are closed, if viewing is permitted.
-- The API exposes the active or next Upload Window.
-
----
-
-# Upload Windows API
-
-## Overview
-
-Upload Windows define when Guests are allowed to upload media to an Album.
-
-An Album may contain multiple Upload Windows for the main event and related events that happen later.
-
-Examples:
-
-- Wedding Day
-- Chilla
-- Family Gathering
-- Custom Event
-
-Outside an active Upload Window, the Gallery may remain available while new uploads are disabled.
-
----
-
-# POST /albums/:albumId/upload-windows
-
-Creates a new Upload Window.
-
-### Permission
-
-Organizer owning the Album or Super Admin.
-
-### Request
-
-```http
-POST /api/v1/albums/:albumId/upload-windows
-Content-Type: application/json
-```
-
-```json
-{
-  "title": "Chilla",
-  "startsAt": "2026-09-19T11:00:00.000Z",
-  "endsAt": "2026-09-19T17:00:00.000Z"
-}
-```
-
-### Validation
-
-The server shall:
-
-- Verify Album access.
-- Require a title.
-- Require start and end timestamps.
-- Ensure `endsAt` is later than `startsAt`.
-- Prevent overlapping Upload Windows within the same Album.
-- Reject creation for deleted Albums.
-- Reject creation for archived Albums unless restored first.
-
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": "uuid",
-    "albumId": "uuid",
-    "title": "Chilla",
-    "startsAt": "2026-09-19T11:00:00.000Z",
-    "endsAt": "2026-09-19T17:00:00.000Z",
-    "status": "SCHEDULED"
-  }
-}
-```
-
-### Errors
-
-```text
-400 INVALID_REQUEST
-403 ALBUM_ACCESS_DENIED
-404 ALBUM_NOT_FOUND
-409 UPLOAD_WINDOW_OVERLAP
-409 ALBUM_ARCHIVED
-422 INVALID_TIME_RANGE
-```
-
----
-
-# GET /albums/:albumId/upload-windows
-
-Returns Upload Windows belonging to an Album.
-
-### Permission
-
-Organizer owning the Album or Super Admin.
-
-### Request
-
-```http
 GET /api/v1/albums/:albumId/upload-windows
 ```
 
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": "uuid",
-      "title": "Wedding Day",
-      "startsAt": "2026-09-12T05:00:00.000Z",
-      "endsAt": "2026-09-12T20:00:00.000Z",
-      "status": "CLOSED"
-    },
-    {
-      "id": "uuid",
-      "title": "Chilla",
-      "startsAt": "2026-09-19T11:00:00.000Z",
-      "endsAt": "2026-09-19T17:00:00.000Z",
-      "status": "SCHEDULED"
-    }
-  ]
-}
-```
-
----
-
-# GET /albums/:albumId/upload-windows/:windowId
-
-Returns a specific Upload Window.
-
-### Permission
-
-Organizer owning the Album or Super Admin.
-
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": "uuid",
-    "albumId": "uuid",
-    "title": "Chilla",
-    "startsAt": "2026-09-19T11:00:00.000Z",
-    "endsAt": "2026-09-19T17:00:00.000Z",
-    "status": "SCHEDULED"
-  }
-}
-```
-
-### Errors
+Requires:
 
 ```text
-403 ALBUM_ACCESS_DENIED
-404 UPLOAD_WINDOW_NOT_FOUND
+ORGANIZER owner
+or
+SUPER_ADMIN through authorized administrative context
 ```
+
+Returns Upload Windows belonging to the Album.
 
 ---
 
-# PATCH /albums/:albumId/upload-windows/:windowId
+# 21. Create Upload Window
 
-Updates an Upload Window.
-
-### Permission
-
-Organizer owning the Album or Super Admin.
-
-### Request
-
-```http
-PATCH /api/v1/albums/:albumId/upload-windows/:windowId
-Content-Type: application/json
+```text
+POST /api/v1/albums/:albumId/upload-windows
 ```
+
+Organizer may create an Upload Window for an Album they manage where product policy permits.
+
+Request:
 
 ```json
 {
-  "title": "Chilla Evening",
-  "startsAt": "2026-09-19T12:00:00.000Z",
+  "name": "Chilla",
+  "startsAt": "2026-09-19T13:00:00.000Z",
   "endsAt": "2026-09-19T18:00:00.000Z"
 }
 ```
 
-### Validation
-
-The server shall:
-
-- Verify Album ownership or administrative access.
-- Verify the Upload Window belongs to the Album.
-- Validate the time range.
-- Prevent overlaps with other Upload Windows.
-- Reject modification of cancelled windows.
-
-### Errors
+Backend validates:
 
 ```text
-403 ALBUM_ACCESS_DENIED
-404 UPLOAD_WINDOW_NOT_FOUND
-409 UPLOAD_WINDOW_OVERLAP
-409 UPLOAD_WINDOW_CANCELLED
-422 INVALID_TIME_RANGE
+Album ownership
+Album availability
+endsAt > startsAt
+No forbidden overlap
+Valid timestamps
+Product restrictions
+```
+
+Success:
+
+```text
+201 Created
 ```
 
 ---
 
-# POST /albums/:albumId/upload-windows/:windowId/open
+# 22. Update Upload Window
 
-Immediately opens an Upload Window.
+```text
+PATCH /api/v1/albums/:albumId/upload-windows/:windowId
+```
 
-### Permission
+Permitted fields:
 
-Organizer owning the Album or Super Admin.
+```text
+name
+startsAt
+endsAt
+```
 
-### Behavior
+Backend verifies that the Upload Window belongs to the specified Album.
 
-The server shall:
+Protected Album `eventDate` is unaffected.
 
-- Verify the Album is not archived.
-- Verify the window is not cancelled.
-- Ensure another Upload Window is not currently active.
-- Set the effective opening time to now.
-- Change status to `ACTIVE`.
+---
 
-### Success Response
+# 23. Delete Upload Window
+
+```text
+DELETE /api/v1/albums/:albumId/upload-windows/:windowId
+```
+
+Requires appropriate Album authorization.
+
+Deletion behavior may be physical for unused configuration records or application-managed according to final implementation policy.
+
+Deleting a window does not delete Media previously uploaded during that window.
+
+---
+
+# 24. Upload Window State
+
+No endpoint should toggle:
+
+```text
+isActive = true
+```
+
+as the authoritative mechanism.
+
+Current state is derived from:
+
+```text
+startsAt <= now < endsAt
+```
+
+and Album availability.
+
+---
+
+# 25. Public Guest Album Entry
+
+```text
+GET /api/v1/guest/albums/:publicIdentifier
+```
+
+No authenticated User account required.
+
+Backend validates:
+
+```text
+Album exists
+Album is available for Guest access
+Album is not deleted
+```
+
+Response contains only Guest-safe information.
+
+Example:
 
 ```json
 {
   "success": true,
   "data": {
-    "id": "uuid",
-    "status": "ACTIVE",
-    "startsAt": "2026-09-19T10:42:15.000Z",
-    "endsAt": "2026-09-19T17:00:00.000Z"
+    "title": "Aziz & Malika",
+    "eventDate": "2026-09-12T00:00:00.000Z",
+    "timezone": "Asia/Tashkent",
+    "canUploadNow": true
   }
 }
 ```
 
+Must not expose:
+
+```text
+organizerId
+internal storage keys
+private settings
+administrative metadata
+```
+
 ---
 
-# POST /albums/:albumId/upload-windows/:windowId/close
+# 26. Guest Session Creation
 
-Immediately closes an active Upload Window.
+```text
+POST /api/v1/guest/albums/:publicIdentifier/session
+```
 
-### Permission
+Creates or establishes Guest participation.
 
-Organizer owning the Album or Super Admin.
+Possible request:
 
-### Behavior
+```json
+{
+  "displayName": "Kamron"
+}
+```
 
-The server shall:
+`displayName` may be optional if anonymous Guest participation is supported.
 
-- Set the effective closing time to now.
-- Change status to `CLOSED`.
-- Prevent new uploads immediately.
-- Allow uploads already accepted by the server to finish according to upload policy.
+Backend:
 
-### Success Response
+```text
+Validates Album
+Creates Guest if required
+Creates GuestSession
+Returns/sets Guest session credential securely
+```
+
+The credential must not be stored raw in PostgreSQL.
+
+---
+
+# 27. Guest Session Context
+
+Guest-protected requests must resolve:
+
+```text
+GuestSession
+      ↓
+Guest
+      ↓
+Album
+```
+
+and verify that the Session is valid.
+
+A Guest Session for Album A must not authorize Guest operations in Album B.
+
+---
+
+# 28. Guest Gallery
+
+```text
+GET /api/v1/guest/albums/:publicIdentifier/media
+```
+
+Returns only:
+
+```text
+status = READY
+visibility = VISIBLE
+deletedAt IS NULL
+```
+
+Media belonging to the target Album.
+
+Supports cursor pagination.
+
+Example:
+
+```text
+GET /api/v1/guest/albums/:publicIdentifier/media?cursor=...
+```
+
+---
+
+# 29. Gallery Response
+
+Example:
 
 ```json
 {
   "success": true,
-  "data": {
-    "id": "uuid",
-    "status": "CLOSED",
-    "endsAt": "2026-09-19T16:24:11.000Z"
+  "data": [
+    {
+      "id": "...",
+      "type": "IMAGE",
+      "width": 3024,
+      "height": 4032,
+      "thumbnailUrl": "...",
+      "displayUrl": "...",
+      "createdAt": "2026-09-12T16:42:10.000Z"
+    }
+  ],
+  "pagination": {
+    "nextCursor": "..."
   }
 }
 ```
 
----
-
-# DELETE /albums/:albumId/upload-windows/:windowId
-
-Cancels an Upload Window.
-
-### Permission
-
-Organizer owning the Album or Super Admin.
-
-### Behavior
-
-For a future window:
-
-- Change status to `CANCELLED`.
-
-For an active window:
-
-- Close uploads.
-- Change status to `CANCELLED`.
-
-Historical Upload Windows should not be physically deleted because Media may reference them.
-
-### Success Response
-
-```http
-204 No Content
-```
+The API must not expose permanent R2 credentials or trusted internal storage information.
 
 ---
 
-# Upload Window State Rules
-
-The standard lifecycle is:
+# 30. Guest Media Details
 
 ```text
-SCHEDULED
-    ↓
-  ACTIVE
-    ↓
-  CLOSED
+GET /api/v1/guest/albums/:publicIdentifier/media/:mediaId
 ```
 
-A window may also become:
+Returns the Media only if it is Guest-visible.
+
+A valid Media ID does not bypass Album or visibility checks.
+
+---
+
+# 31. Upload Flow Overview
+
+Guest upload uses:
 
 ```text
-SCHEDULED → CANCELLED
-ACTIVE    → CANCELLED
+1. Create Upload Intent
+2. Upload binary directly to R2
+3. Confirm Upload
+4. Background Processing
+5. Media becomes READY
 ```
 
-Status should be derived from timestamps where possible rather than relying only on scheduled background jobs.
-
-This ensures uploads do not remain incorrectly open if a scheduler or worker is temporarily unavailable.
-
----
-
-# Upload Authorization
-
-Before accepting a Guest upload, the server must verify:
-
-1. Album exists.
-2. Album is available.
-3. Album is not archived or deleted.
-4. Guest session belongs to the Album.
-5. An Upload Window is currently active.
-6. The Upload Window belongs to the Album.
-7. Upload limits have not been exceeded.
-
-The frontend state must never be treated as proof that uploads are allowed.
-
----
-
-# Concurrency
-
-The API must prevent two Upload Windows for the same Album from becoming active simultaneously.
-
-Opening or modifying a window should perform overlap validation atomically where practical.
-
----
-
-# Upload Windows Authorization Matrix
-
-| Endpoint | Guest | Organizer | Super Admin |
-|---|:---:|:---:|:---:|
-| POST /albums/:albumId/upload-windows | — | Own | ✓ |
-| GET /albums/:albumId/upload-windows | — | Own | ✓ |
-| GET /albums/:albumId/upload-windows/:windowId | — | Own | ✓ |
-| PATCH /albums/:albumId/upload-windows/:windowId | — | Own | ✓ |
-| POST .../:windowId/open | — | Own | ✓ |
-| POST .../:windowId/close | — | Own | ✓ |
-| DELETE .../:windowId | — | Own | ✓ |
-
-Guests receive current availability through the public Album Access API rather than these management endpoints.
-
----
-
-# Upload Windows Acceptance Criteria
-
-The module is complete when:
-
-- Multiple Upload Windows can belong to one Album.
-- Organizer can create future Upload Windows.
-- Organizer can edit scheduled windows.
-- Organizer can manually open uploads.
-- Organizer can manually close uploads.
-- Overlapping windows are rejected.
-- Archived Albums cannot accept uploads.
-- Window state remains correct even if background workers are temporarily unavailable.
-- Guests can upload only during an active window.
-- Closing one window does not prevent a future scheduled window from opening.
-- Historical Media remains associated with the Upload Window in which it was uploaded.
-
----
-
-# Media Upload API
-
-## Overview
-
-The Media Upload API manages the lifecycle of photos and videos uploaded by Guests and Organizers.
-
-Media files are uploaded directly from the client to Cloudflare R2 using temporary upload authorization issued by the Livara API.
-
-The backend controls:
-
-- Album access
-- Guest access
-- Upload Window availability
-- File validation
-- Upload limits
-- Media metadata
-- Processing state
-- Storage authorization
-
-Binary media should not pass through the main NestJS API during normal uploads.
-
----
-
-# Upload Lifecycle
-
-A standard upload follows this flow:
+Conceptually:
 
 ```text
-Select Media
-    ↓
-Initialize Upload
-    ↓
-API Validation
-    ↓
-Create Media Record
-    ↓
-Temporary R2 Upload Authorization
-    ↓
-Direct Upload to R2
-    ↓
-Complete Upload
-    ↓
-Server Verification
-    ↓
-PROCESSING
-    ↓
+Guest
+  ↓
+API
+  ↓
+R2
+  ↓
+API
+  ↓
 BullMQ
-    ↓
-Thumbnail / Preview / Metadata
-    ↓
-READY
-    ↓
-Gallery
+  ↓
+Worker
 ```
 
 ---
 
-# POST /public/albums/:slug/media/uploads
+# 32. Create Upload Intent
 
-Initializes one or more Guest uploads.
-
-### Permission
-
-Valid Guest session required.
-
-### Request
-
-```http
-POST /api/v1/public/albums/:slug/media/uploads
-Content-Type: application/json
+```text
+POST /api/v1/guest/albums/:publicIdentifier/uploads
 ```
+
+Requires valid Guest Session.
+
+Request:
 
 ```json
 {
   "files": [
     {
-      "clientId": "local-file-1",
-      "fileName": "IMG_4821.JPG",
+      "clientId": "local-1",
+      "filename": "IMG_4821.JPG",
       "mimeType": "image/jpeg",
-      "fileSize": 4281942
+      "sizeBytes": 4839201
     },
     {
-      "clientId": "local-file-2",
-      "fileName": "IMG_4822.JPG",
-      "mimeType": "image/jpeg",
-      "fileSize": 5182031
+      "clientId": "local-2",
+      "filename": "VID_4822.MOV",
+      "mimeType": "video/quicktime",
+      "sizeBytes": 48283920
     }
   ]
 }
 ```
 
-`clientId` is generated by the client and allows the frontend to match each server response to the selected local file.
+Backend validates each file independently.
 
 ---
 
-## Validation
+# 33. Upload Intent Validation
 
-For every requested file, the server shall verify:
+For each file, backend verifies:
 
-- Album exists.
-- Album is available.
-- Guest session belongs to the Album.
-- An Upload Window is active.
-- File size is within configured limits.
-- MIME type is allowed.
-- Upload rate limits are not exceeded.
-- Album storage limits are not exceeded.
+```text
+GuestSession valid
+Guest belongs to Album
+Album available
+Active UploadWindow exists
+File type allowed
+Declared size allowed
+Rate limits acceptable
+Storage policy acceptable
+```
 
-Client-provided file metadata must not be treated as trusted proof of the actual uploaded file type.
+The client-provided MIME type is preliminary metadata only.
+
+Actual uploaded object is validated during processing.
 
 ---
 
-## Success Response
+# 34. Upload Intent Response
+
+Example:
 
 ```json
 {
@@ -2155,29 +858,29 @@ Client-provided file metadata must not be treated as trusted proof of the actual
   "data": {
     "uploads": [
       {
-        "clientId": "local-file-1",
-        "mediaId": "uuid",
-        "status": "UPLOADING",
+        "clientId": "local-1",
+        "mediaId": "...",
+        "status": "PENDING",
         "upload": {
           "method": "PUT",
-          "url": "temporary-signed-upload-url",
+          "url": "...",
           "headers": {
             "Content-Type": "image/jpeg"
           },
-          "expiresAt": "2026-09-12T16:10:00.000Z"
+          "expiresAt": "2026-09-12T16:50:00.000Z"
         }
       },
       {
-        "clientId": "local-file-2",
-        "mediaId": "uuid",
-        "status": "UPLOADING",
+        "clientId": "local-2",
+        "mediaId": "...",
+        "status": "PENDING",
         "upload": {
           "method": "PUT",
-          "url": "temporary-signed-upload-url",
+          "url": "...",
           "headers": {
-            "Content-Type": "image/jpeg"
+            "Content-Type": "video/quicktime"
           },
-          "expiresAt": "2026-09-12T16:10:00.000Z"
+          "expiresAt": "2026-09-12T16:50:00.000Z"
         }
       }
     ]
@@ -2185,912 +888,374 @@ Client-provided file metadata must not be treated as trusted proof of the actual
 }
 ```
 
-The signed URL must:
-
-- Expire after a short period.
-- Allow upload only to the assigned object key.
-- Not provide general access to the storage bucket.
+Each upload authorization is short-lived and object-scoped.
 
 ---
 
-# Direct Storage Upload
+# 35. Partial Upload Intent Failure
 
-After initialization, the client uploads each file directly to object storage.
+Multiple selected files are independent.
+
+A response may contain per-file failures.
+
+Example:
+
+```json
+{
+  "success": true,
+  "data": {
+    "uploads": [
+      {
+        "clientId": "local-1",
+        "mediaId": "...",
+        "status": "PENDING",
+        "upload": {
+          "method": "PUT",
+          "url": "...",
+          "expiresAt": "..."
+        }
+      }
+    ],
+    "rejected": [
+      {
+        "clientId": "local-2",
+        "code": "FILE_TOO_LARGE",
+        "message": "The selected file exceeds the upload limit."
+      }
+    ]
+  }
+}
+```
+
+One invalid file does not reject every valid file.
+
+---
+
+# 36. Direct R2 Upload
+
+After authorization:
 
 ```text
 Guest Device
-      │
-      │ PUT media binary
-      ▼
+      ↓
+PUT temporary signed URL
+      ↓
 Cloudflare R2
 ```
 
-The NestJS API does not proxy the media binary.
+The binary does not pass through the normal NestJS API.
 
-The client tracks progress independently for every file.
+The signed authorization must not grant access to arbitrary storage objects.
 
 ---
 
-# POST /public/albums/:slug/media/:mediaId/complete
+# 37. Confirm Upload
 
-Confirms that the client finished uploading a media object.
+After successful R2 transfer:
 
-### Permission
-
-Guest session that initialized the upload.
-
-### Request
-
-```http
-POST /api/v1/public/albums/:slug/media/:mediaId/complete
+```text
+POST /api/v1/guest/albums/:publicIdentifier/uploads/:mediaId/complete
 ```
 
-### Behavior
+Requires valid Guest Session.
 
-The server shall:
+Backend verifies:
 
-- Verify Guest session.
-- Verify Media ownership.
-- Verify the Media belongs to the Album.
-- Verify the object exists in R2.
-- Verify expected file size where possible.
-- Validate stored object metadata.
-- Prevent completing the same upload incorrectly multiple times.
-- Change Media status to `PROCESSING`.
-- Queue the appropriate processing job.
+```text
+Media belongs to Album
+Media belongs to Guest/source
+Media status permits completion
+Expected object exists
+Object satisfies preliminary constraints
+```
 
-### Success Response
+Then:
+
+```text
+Media → UPLOADED
+```
+
+and processing is queued.
+
+---
+
+# 38. Upload Completion Idempotency
+
+Upload completion must tolerate safe retries.
+
+Example:
+
+```text
+Client sends /complete
+Network response lost
+Client retries /complete
+```
+
+The second request must not create duplicate Media or duplicate destructive processing.
+
+Possible behavior:
+
+```text
+UPLOADED / PROCESSING / READY
+→ return current state
+```
+
+when the same valid completion is repeated.
+
+---
+
+# 39. Media Processing
+
+After completion:
+
+```text
+Media = UPLOADED
+      ↓
+Queue
+      ↓
+Worker
+      ↓
+Media = PROCESSING
+      ↓
+Validation / Derivatives
+      ↓
+READY or FAILED
+```
+
+The HTTP request does not wait for expensive processing.
+
+---
+
+# 40. Guest Upload Status
+
+```text
+GET /api/v1/guest/albums/:publicIdentifier/uploads/:mediaId
+```
+
+Requires valid Guest Session and ownership/access validation.
+
+Example:
 
 ```json
 {
   "success": true,
   "data": {
-    "mediaId": "uuid",
+    "id": "...",
     "status": "PROCESSING"
   }
 }
 ```
 
-The endpoint should be idempotent.
-
-Repeated valid completion requests must not create duplicate processing jobs.
-
----
-
-# GET /public/albums/:slug/media/:mediaId/status
-
-Returns the current processing state of a Guest upload.
-
-### Permission
-
-Valid Guest session.
-
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "mediaId": "uuid",
-    "status": "READY"
-  }
-}
-```
-
-Possible statuses:
+Possible states:
 
 ```text
-UPLOADING
+PENDING
+UPLOADED
 PROCESSING
 READY
 FAILED
-DELETED
 ```
 
 ---
 
-# POST /public/albums/:slug/media/:mediaId/retry
+# 41. Upload Window Closing During Upload
 
-Retries processing after a recoverable processing failure.
+Upload authorization is validated when the Upload Intent is created.
 
-### Permission
+If the Upload Window closes while an already-authorized file is actively uploading, the platform may allow completion within the short authorization lifetime.
 
-Guest session that uploaded the Media.
+A new Upload Intent after the window closes must be rejected.
 
-### Behavior
-
-The server shall:
-
-- Verify the original object exists.
-- Verify the failure is retryable.
-- Prevent duplicate active processing jobs.
-- Change status to `PROCESSING`.
-- Queue processing again.
-
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "mediaId": "uuid",
-    "status": "PROCESSING"
-  }
-}
-```
+This prevents uploads from failing merely because the clock crossed the end time during a legitimate transfer.
 
 ---
 
-# DELETE /public/albums/:slug/media/:mediaId/upload
-
-Cancels an unfinished upload.
-
-### Permission
-
-Guest session that initialized the upload.
-
-### Behavior
-
-The server shall:
-
-- Cancel the pending upload where possible.
-- Mark the temporary Media record for cleanup.
-- Remove incomplete storage objects.
-- Prevent processing.
-
-### Success Response
-
-```http
-204 No Content
-```
-
-This endpoint does not allow Guests to delete successfully published gallery media.
-
----
-
-# Upload Expiration
-
-Initialized uploads must expire if they are never completed.
-
-Example lifecycle:
+# 42. Organizer Media List
 
 ```text
-UPLOADING
-    ↓
-Expiration reached
-    ↓
-Cleanup Worker
-    ↓
-Temporary object removed
-    ↓
-Media record cleaned up
+GET /api/v1/albums/:albumId/media
 ```
 
-The exact expiration period is configurable.
+Requires Album ownership.
 
----
+Unlike Guest Gallery, Organizer Media management may include:
 
-# File Validation
+```text
+READY
+FAILED
+PROCESSING
+HIDDEN
+```
 
-Validation occurs at multiple stages.
-
-## Initialization
-
-Validate:
-
-- Declared MIME type
-- Declared file size
-- Filename
-- Upload limits
-
-## Completion
-
-Validate:
-
-- Object exists
-- Expected object size
-- Storage metadata
-
-## Processing
-
-Validate actual file contents before making Media available in the Gallery.
-
-A file must never become `READY` solely because the client declared a valid MIME type.
-
----
-
-# Multiple Uploads
-
-Guests may initialize multiple files in a single request.
-
-Each file has its own:
-
-- Media ID
-- Upload URL
-- Progress
-- Status
-- Retry lifecycle
-
-Failure of one file must not automatically fail the entire batch.
+according to query filters.
 
 Example:
 
 ```text
-Photo 1   READY
-Photo 2   READY
-Photo 3   FAILED
-Photo 4   UPLOADING
-Photo 5   PROCESSING
+?status=READY&visibility=HIDDEN
 ```
+
+Soft-deleted Media should require an explicit authorized recovery/admin context rather than appearing in normal Organizer lists.
 
 ---
 
-# Upload Concurrency
-
-The client should limit simultaneous uploads.
-
-For example:
+# 43. Organizer Media Details
 
 ```text
-Selected: 37 files
-
-Uploading simultaneously: 4
-Waiting: 33
+GET /api/v1/albums/:albumId/media/:mediaId
 ```
 
-The exact concurrency limit is a client configuration and may vary based on device and network conditions.
+Requires Album ownership.
+
+Returns management-safe metadata.
+
+Storage secrets remain excluded.
 
 ---
 
-# Large File Uploads
-
-The initial MVP may use signed single-request uploads for files below configured limits.
-
-Future versions may support multipart uploads for:
-
-- Large videos
-- Unstable networks
-- Resumable uploads
-
-The API design should allow multipart upload support without changing the Media entity model.
-
----
-
-# Organizer Uploads
-
-Authenticated Organizers may upload media to their own Albums using the same upload lifecycle.
-
-Organizer-specific endpoints may use:
+# 44. Hide Media
 
 ```text
-POST /albums/:albumId/media/uploads
-POST /albums/:albumId/media/:mediaId/complete
+POST /api/v1/albums/:albumId/media/:mediaId/hide
 ```
 
-The underlying upload service and processing pipeline should be shared with Guest uploads.
+Requires Organizer ownership.
 
----
-
-# Upload Security
-
-The system shall:
-
-- Use short-lived signed upload authorization.
-- Generate storage object keys server-side.
-- Never expose R2 credentials to clients.
-- Validate Album and Guest permissions before initialization.
-- Apply rate limits.
-- Apply file size limits.
-- Validate actual file contents during processing.
-- Prevent clients from selecting arbitrary storage paths.
-
----
-
-# Media Upload Acceptance Criteria
-
-The module is complete when:
-
-- Guests can initialize uploads during an active Upload Window.
-- Uploads are rejected outside active Upload Windows.
-- Multiple files can be initialized together.
-- Files upload directly to object storage.
-- NestJS does not proxy normal media binaries.
-- Every file has an independent status.
-- Successful uploads enter background processing.
-- Failed processing can be retried when appropriate.
-- Incomplete uploads are cleaned automatically.
-- Duplicate completion requests do not create duplicate jobs.
-- Media becomes visible in the Gallery only after reaching `READY`.
-
----
-
-# Gallery & Media API
-
-## Overview
-
-The Gallery & Media API provides access to processed photos and videos stored within an Album.
-
-Only Media with status `READY` and visible to Guests may appear in the public Gallery.
-
-The API supports:
-
-- Gallery browsing
-- Cursor pagination
-- Filtering
-- Sorting
-- Individual Media access
-- Organizer moderation
-- Media deletion
-- Media restoration
-
----
-
-# GET /public/albums/:slug/media
-
-Returns visible Media for the public Gallery.
-
-### Permission
-
-Public Album access.
-
-### Request
-
-```http
-GET /api/v1/public/albums/:slug/media
-```
-
-### Query Parameters
+Backend verifies:
 
 ```text
-?limit=50
-?cursor=...
-?type=IMAGE
-?sort=uploadedAt
-?order=desc
+Media belongs to Album
+Media not deleted
+Action permitted
 ```
 
-Supported filters may include:
-
-- IMAGE
-- VIDEO
-
-Only Media with status `READY` and public visibility may be returned.
-
----
-
-## Success Response
-
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": "uuid",
-      "type": "IMAGE",
-      "thumbnailUrl": "https://media.example.com/...",
-      "previewUrl": "https://media.example.com/...",
-      "width": 3024,
-      "height": 4032,
-      "uploadedAt": "2026-09-12T18:42:11.000Z",
-      "guest": {
-        "displayName": "Komiljon"
-      }
-    }
-  ],
-  "meta": {
-    "nextCursor": "...",
-    "hasMore": true
-  }
-}
-```
-
-Guest information shall only be returned when Album privacy settings allow it.
-
----
-
-# Gallery Pagination
-
-The Gallery uses cursor-based pagination.
-
-The server shall:
-
-- Return a configurable number of Media records.
-- Provide `nextCursor`.
-- Indicate whether additional results exist.
-- Maintain stable ordering between requests.
-
-Example:
+Result:
 
 ```text
-GET /media?limit=50
-
-↓
-
-50 Media
-
-↓
-
-nextCursor
-
-↓
-
-GET /media?limit=50&cursor=...
+visibility = HIDDEN
 ```
 
-Cursor implementation details must remain opaque to clients.
+Processing status remains unchanged.
 
 ---
 
-# Gallery Sorting
-
-Default sorting:
+# 45. Restore Hidden Media
 
 ```text
-uploadedAt DESC
+POST /api/v1/albums/:albumId/media/:mediaId/restore-visibility
 ```
 
-Future sorting options may include:
+Restores:
 
-- Oldest first
-- Capture time
-- Most viewed
-- Favorites
+```text
+visibility = VISIBLE
+```
 
-The API must use deterministic ordering.
+only if Media is otherwise valid for visibility.
 
-If multiple Media records share the same timestamp, a secondary unique field such as Media ID shall be used.
+For example, failed Media must not become Guest-visible merely because visibility was restored.
 
 ---
 
-# GET /public/albums/:slug/media/:mediaId
+# 46. Delete Media
 
-Returns a single visible Media item.
+```text
+DELETE /api/v1/albums/:albumId/media/:mediaId
+```
 
-### Permission
+Requires appropriate Organizer permission.
 
-Public Album access.
+For recoverable Media:
 
-### Success Response
+```text
+deletedAt = now
+```
+
+Normal Guest and Organizer views exclude it.
+
+R2 objects are not immediately destroyed if recovery retention applies.
+
+---
+
+# 47. Media Recovery
+
+Recovery is an administrative operation.
+
+```text
+POST /api/v1/admin/media/:mediaId/recover
+```
+
+Requires:
+
+```text
+SUPER_ADMIN
+```
+
+Backend verifies recovery eligibility.
+
+Recovery clears deletion state but does not bypass processing or visibility rules.
+
+---
+
+# 48. Download Original Media
+
+```text
+GET /api/v1/albums/:albumId/media/:mediaId/download
+```
+
+Requires authorized Organizer access.
+
+Backend:
+
+```text
+Verifies Album ownership
+Verifies Media availability
+Generates temporary download access
+```
+
+Example response:
 
 ```json
 {
   "success": true,
   "data": {
-    "id": "uuid",
-    "type": "IMAGE",
-    "previewUrl": "https://media.example.com/...",
-    "width": 3024,
-    "height": 4032,
-    "uploadedAt": "2026-09-12T18:42:11.000Z"
+    "url": "...",
+    "expiresAt": "..."
   }
 }
 ```
 
-### Errors
+A permanent signed URL must not be persisted as the Media record.
+
+---
+
+# 49. Guest Downloads
+
+Guest download behavior is optional/configurable according to final MVP settings.
+
+If enabled, Guest download endpoints must still verify:
 
 ```text
-404 MEDIA_NOT_FOUND
-404 ALBUM_NOT_FOUND
-410 MEDIA_UNAVAILABLE
+Album access
+Media = READY
+visibility = VISIBLE
+deletedAt IS NULL
+Guest download setting
 ```
 
-Hidden, deleted, failed, or processing Media must not be exposed through public endpoints.
+Guest must never obtain arbitrary original object access merely from knowing a storage key.
 
 ---
 
-# GET /albums/:albumId/media
-
-Returns Media for Organizer management.
-
-### Permission
-
-Organizer owning the Album or Super Admin.
-
-Unlike the public Gallery, this endpoint may include:
-
-- READY
-- PROCESSING
-- FAILED
-- Hidden Media
-
-Soft-deleted Media is excluded by default.
-
-### Query Parameters
+# 50. Create Export
 
 ```text
-?limit=50
-?cursor=...
-?type=IMAGE
-?status=READY
-?visibility=HIDDEN
+POST /api/v1/albums/:albumId/exports
 ```
 
----
+Requires Organizer ownership.
 
-# GET /albums/:albumId/media/:mediaId
-
-Returns detailed Media information.
-
-### Permission
-
-Organizer owning the Album or Super Admin.
-
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": "uuid",
-    "albumId": "uuid",
-    "guestId": "uuid",
-    "uploadWindowId": "uuid",
-    "type": "IMAGE",
-    "status": "READY",
-    "visibility": "VISIBLE",
-    "fileName": "IMG_4821.JPG",
-    "mimeType": "image/jpeg",
-    "fileSize": 4281942,
-    "width": 3024,
-    "height": 4032,
-    "uploadedAt": "2026-09-12T18:42:11.000Z"
-  }
-}
-```
-
-Internal storage credentials must never be returned.
-
----
-
-# POST /albums/:albumId/media/:mediaId/hide
-
-Hides Media from the public Gallery without deleting it.
-
-### Permission
-
-Organizer owning the Album or Super Admin.
-
-### Behavior
-
-The server shall:
-
-- Verify Album access.
-- Verify Media belongs to the Album.
-- Set visibility to `HIDDEN`.
-- Remove the Media from public Gallery queries.
-- Preserve stored files.
-
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": "uuid",
-    "visibility": "HIDDEN"
-  }
-}
-```
-
----
-
-# POST /albums/:albumId/media/:mediaId/restore
-
-Restores hidden Media to the public Gallery.
-
-### Permission
-
-Organizer owning the Album or Super Admin.
-
-### Behavior
-
-Only valid `READY` Media may become publicly visible.
-
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": "uuid",
-    "visibility": "VISIBLE"
-  }
-}
-```
-
----
-
-# DELETE /albums/:albumId/media/:mediaId
-
-Soft deletes Media.
-
-### Permission
-
-Organizer owning the Album or Super Admin.
-
-### Behavior
-
-The server shall:
-
-- Verify Media ownership.
-- Set `deletedAt`.
-- Remove Media from Gallery queries.
-- Prevent normal access.
-- Schedule storage cleanup according to retention policy.
-- Record the action in audit logs.
-
-### Success Response
-
-```http
-204 No Content
-```
-
-The binary object should not necessarily be permanently destroyed immediately.
-
----
-
-# POST /albums/:albumId/media/:mediaId/recover
-
-Recovers soft-deleted Media during the configured recovery period.
-
-### Permission
-
-Super Admin.
-
-### Behavior
-
-The server shall:
-
-- Verify the recovery period has not expired.
-- Verify required storage objects still exist.
-- Clear `deletedAt`.
-- Restore the previous visibility state where possible.
-
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": "uuid",
-    "status": "READY"
-  }
-}
-```
-
----
-
-# Media Delivery
-
-Gallery responses shall use optimized assets rather than original files whenever possible.
-
-Example:
-
-```text
-Gallery Grid
-    ↓
-Thumbnail
-
-Media Viewer
-    ↓
-Optimized Preview
-
-Explicit Download
-    ↓
-Original
-```
-
-This reduces:
-
-- Bandwidth usage
-- Loading time
-- Mobile data consumption
-
-Original files should not be loaded simply to display Gallery thumbnails.
-
----
-
-# Media URLs
-
-Media URLs may be:
-
-- CDN URLs
-- Signed URLs
-- Application-controlled delivery URLs
-
-The database stores object identifiers or storage paths rather than temporary signed URLs.
-
-Temporary URLs are generated when needed.
-
----
-
-# Gallery Visibility
-
-Public Gallery Media must satisfy all applicable conditions:
-
-```text
-Album accessible
-AND
-Media status = READY
-AND
-Media visibility = VISIBLE
-AND
-Media not soft-deleted
-```
-
-Upload Window status does not determine whether previously uploaded Media can be viewed.
-
-Closing uploads must not remove existing Media from the Gallery.
-
----
-
-# Media Moderation
-
-For MVP, moderation is performed manually by the Organizer.
-
-Organizer can:
-
-- View Media
-- Hide Media
-- Restore hidden Media
-- Delete Media
-
-Future versions may support:
-
-- Approval before publishing
-- Automated moderation
-- AI content detection
-- Bulk moderation
-
----
-
-# Gallery Performance
-
-The API shall:
-
-- Use cursor pagination.
-- Avoid returning unnecessary metadata.
-- Use database indexes for Album and Media queries.
-- Serve thumbnails for Gallery grids.
-- Support caching where appropriate.
-
-The Gallery should remain usable with thousands of Media records in a single Album.
-
----
-
-# Gallery & Media Authorization Matrix
-
-| Endpoint | Public | Guest | Organizer | Super Admin |
-|---|:---:|:---:|:---:|:---:|
-| GET /public/albums/:slug/media | ✓ | ✓ | ✓ | ✓ |
-| GET /public/albums/:slug/media/:mediaId | ✓ | ✓ | ✓ | ✓ |
-| GET /albums/:albumId/media | — | — | Own | ✓ |
-| GET /albums/:albumId/media/:mediaId | — | — | Own | ✓ |
-| POST .../:mediaId/hide | — | — | Own | ✓ |
-| POST .../:mediaId/restore | — | — | Own | ✓ |
-| DELETE .../:mediaId | — | — | Own | ✓ |
-| POST .../:mediaId/recover | — | — | — | ✓ |
-
----
-
-# Gallery & Media Acceptance Criteria
-
-The module is complete when:
-
-- Guests can browse READY Media.
-- Gallery supports cursor pagination.
-- Photos and videos can be filtered.
-- Hidden Media disappears from the public Gallery.
-- Hidden Media can be restored.
-- Deleted Media disappears from normal queries.
-- Super Admin can recover Media during the recovery period.
-- Gallery uses optimized assets instead of originals.
-- Closing an Upload Window does not affect existing Gallery Media.
-- Public endpoints never expose internal storage information.
-
----
-
-# Downloads & ZIP API
-
-## Overview
-
-The Downloads & ZIP API allows authorized users to download original Media files individually, in selected groups, or as a complete Album archive.
-
-Large archives are generated asynchronously using BullMQ.
-
-Generated ZIP archives are temporary and automatically removed after expiration.
-
----
-
-# GET /albums/:albumId/media/:mediaId/download
-
-Generates temporary access to the original Media file.
-
-### Permission
-
-Organizer owning the Album or Super Admin.
-
-Guest downloads depend on Album download settings and use separate public endpoints.
-
-### Behavior
-
-The server shall:
-
-- Verify Album access.
-- Verify Media belongs to the Album.
-- Verify Media is available.
-- Generate temporary download authorization.
-- Never expose permanent storage credentials.
-
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "url": "temporary-signed-download-url",
-    "fileName": "IMG_4821.JPG",
-    "expiresAt": "2026-09-12T20:15:00.000Z"
-  }
-}
-```
-
----
-
-# GET /public/albums/:slug/media/:mediaId/download
-
-Downloads a Media file through the public Album.
-
-### Permission
-
-Public Album access.
-
-### Validation
-
-The server shall verify:
-
-- Album exists.
-- Album is publicly accessible.
-- Downloads are enabled.
-- Media belongs to the Album.
-- Media status is `READY`.
-- Media is publicly visible.
-- Media is not deleted.
-
-### Errors
-
-```text
-403 DOWNLOADS_DISABLED
-404 MEDIA_NOT_FOUND
-410 MEDIA_UNAVAILABLE
-```
-
----
-
-# POST /albums/:albumId/exports
-
-Creates an asynchronous export job.
-
-The export may contain selected Media or the entire Album.
-
-### Permission
-
-Organizer owning the Album or Super Admin.
-
-### Request — Selected Media
-
-```json
-{
-  "type": "SELECTED",
-  "mediaIds": [
-    "uuid-1",
-    "uuid-2",
-    "uuid-3"
-  ]
-}
-```
-
-### Request — Entire Album
+Full Album request:
 
 ```json
 {
@@ -3098,24 +1263,49 @@ Organizer owning the Album or Super Admin.
 }
 ```
 
-### Behavior
+Selected Media:
 
-The server shall:
+```json
+{
+  "type": "SELECTED_MEDIA",
+  "mediaIds": [
+    "...",
+    "..."
+  ]
+}
+```
 
-- Verify Album access.
-- Validate requested Media.
-- Create an Export record.
-- Set export status to `QUEUED`.
-- Create a BullMQ job.
-- Return immediately without waiting for ZIP generation.
+Backend validates every selected Media belongs to the Album.
 
-### Success Response
+---
+
+# 51. Export Creation
+
+Backend:
+
+```text
+Validates Organizer
+Validates Album
+Validates Media selection
+Creates Export
+Creates ExportItems where required
+Sets status = QUEUED
+Queues Export job
+```
+
+Response:
+
+```text
+202 Accepted
+```
+
+Example:
 
 ```json
 {
   "success": true,
   "data": {
-    "exportId": "uuid",
+    "id": "...",
     "status": "QUEUED"
   }
 }
@@ -3123,1229 +1313,1321 @@ The server shall:
 
 ---
 
-# GET /albums/:albumId/exports/:exportId
+# 52. Export List
 
-Returns the current state of an export.
-
-### Permission
-
-Organizer owning the Album or Super Admin.
-
-### Success Response — Processing
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": "uuid",
-    "status": "PROCESSING",
-    "progress": 63
-  }
-}
+```text
+GET /api/v1/albums/:albumId/exports
 ```
 
-### Success Response — Ready
+Requires Organizer ownership.
 
-```json
-{
-  "success": true,
-  "data": {
-    "id": "uuid",
-    "status": "READY",
-    "fileSize": 4831838208,
-    "expiresAt": "2026-09-13T20:00:00.000Z"
-  }
-}
-```
+Returns exports associated with the Album and authorized management context.
 
 ---
 
-# GET /albums/:albumId/exports/:exportId/download
-
-Generates temporary download access for a completed export.
-
-### Permission
-
-Organizer owning the Album or Super Admin.
-
-### Behavior
-
-The server shall:
-
-- Verify export ownership.
-- Verify status is `READY`.
-- Verify the archive has not expired.
-- Generate a short-lived signed download URL.
-
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "url": "temporary-signed-download-url",
-    "fileName": "aziz-malika.zip",
-    "expiresAt": "2026-09-12T21:15:00.000Z"
-  }
-}
-```
-
-### Errors
+# 53. Export Details
 
 ```text
-404 EXPORT_NOT_FOUND
-409 EXPORT_NOT_READY
-410 EXPORT_EXPIRED
+GET /api/v1/albums/:albumId/exports/:exportId
 ```
-
----
-
-# DELETE /albums/:albumId/exports/:exportId
-
-Deletes a generated export before automatic expiration.
-
-### Permission
-
-Organizer owning the Album or Super Admin.
-
-### Behavior
-
-The server shall:
-
-- Remove the generated archive from object storage.
-- Mark the Export as expired or deleted.
-- Preserve audit information where required.
-
-### Success Response
-
-```http
-204 No Content
-```
-
----
-
-# Export States
-
-An Export may have the following states:
-
-```text
-QUEUED
-  ↓
-PROCESSING
-  ↓
-READY
-```
-
-Failure:
-
-```text
-QUEUED / PROCESSING
-        ↓
-      FAILED
-```
-
-Expiration:
-
-```text
-READY
-  ↓
-EXPIRED
-```
-
----
-
-# ZIP Generation
-
-ZIP archives are generated by Background Workers.
-
-```text
-Create Export
-     ↓
-BullMQ
-     ↓
-ZIP Worker
-     ↓
-Read originals from R2
-     ↓
-Build archive
-     ↓
-Store temporary ZIP in R2
-     ↓
-Export = READY
-     ↓
-Notify Organizer
-```
-
-The API process must not generate large ZIP archives synchronously.
-
----
-
-# Archive Contents
-
-By default, exports contain original Media files.
-
-The system should preserve original filenames where possible while preventing filename collisions inside the archive.
 
 Example:
 
-```text
-Livara - Aziz & Malika/
-
-photos/
-  IMG_4821.JPG
-  IMG_4822.JPG
-
-videos/
-  VID_1051.MOV
+```json
+{
+  "success": true,
+  "data": {
+    "id": "...",
+    "type": "FULL_ALBUM",
+    "status": "READY",
+    "createdAt": "...",
+    "completedAt": "...",
+    "expiresAt": "..."
+  }
+}
 ```
 
-Exact archive organization may evolve without changing the public API contract.
+---
+
+# 54. Export Download
+
+```text
+GET /api/v1/albums/:albumId/exports/:exportId/download
+```
+
+Requires current Organizer authorization.
+
+Backend verifies:
+
+```text
+Export belongs to Album
+User currently owns/manages Album
+Export status = READY
+Export not expired
+Archive exists
+```
+
+Then generates temporary download access.
 
 ---
 
-# Export Expiration
+# 55. Export Expiration
 
-Generated archives are temporary.
+Expired exports return a stable error:
 
-After `expiresAt`:
+```text
+EXPORT_EXPIRED
+```
 
-- Download access is rejected.
-- Cleanup Worker removes the ZIP from object storage.
-- Export status becomes `EXPIRED`.
+The Organizer may request a new Export.
 
-The Organizer may create a new export later.
-
----
-
-# Export Concurrency
-
-The system should prevent unnecessary duplicate full-album exports.
-
-If an equivalent export is already being generated, the API may reuse the existing active job rather than create another expensive job.
+Temporary ZIP expiration does not delete original Album Media.
 
 ---
 
-# Downloads Security
+# 56. Notifications
 
-The system shall:
-
-- Never expose Cloudflare R2 credentials.
-- Use short-lived download authorization.
-- Validate ownership before generating private download access.
-- Apply rate limits where appropriate.
-- Prevent access to deleted Media.
-- Prevent access to expired exports.
-
----
-
-# Downloads & ZIP Acceptance Criteria
-
-The module is complete when:
-
-- Organizer can download an original Media file.
-- Public Media downloads respect Album settings.
-- Organizer can request selected Media as an archive.
-- Organizer can request the entire Album as an archive.
-- Large ZIP generation occurs asynchronously.
-- Export progress can be checked.
-- Completed archives can be downloaded securely.
-- Expired archives become unavailable.
-- Temporary archives are automatically cleaned up.
-- Unauthorized users cannot access private exports.
-
----
-
-# Notifications API
-
-## Overview
-
-The Notifications API provides authenticated users with important updates about their Albums and platform activity.
-
-For the MVP, notifications are primarily intended for Organizers and Super Admins.
-
-Examples:
-
-- New Media uploaded
-- Upload Window opened
-- Upload Window closed
-- ZIP export ready
-- Storage warning
-- System notification
-
-Guest-facing messages such as upload success or validation errors do not necessarily require persistent Notification records.
-
----
-
-# GET /notifications
-
-Returns notifications belonging to the authenticated User.
-
-### Permission
-
-Organizer or Super Admin.
-
-### Request
-
-```http
+```text
 GET /api/v1/notifications
 ```
 
-### Query Parameters
+Requires authenticated User.
 
-```text
-?limit=20
-?cursor=...
-?read=false
-?type=ZIP_READY
-```
+Returns only Notifications belonging to that User.
 
-Supported filters may include:
-
-- Read status
-- Notification type
-- Album
-- Creation date
-
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": "uuid",
-      "type": "MEDIA_UPLOADED",
-      "title": "New memories added",
-      "message": "12 new photos were uploaded to Aziz & Malika.",
-      "albumId": "uuid",
-      "isRead": false,
-      "createdAt": "2026-09-12T18:42:11.000Z"
-    }
-  ],
-  "meta": {
-    "nextCursor": "...",
-    "hasMore": true
-  }
-}
-```
-
-The server must return only notifications belonging to the authenticated User.
+Supports cursor pagination.
 
 ---
 
-# GET /notifications/unread-count
+# 57. Unread Notification Count
 
-Returns the number of unread notifications.
-
-### Permission
-
-Organizer or Super Admin.
-
-### Request
-
-```http
+```text
 GET /api/v1/notifications/unread-count
 ```
 
-### Success Response
+Example:
 
 ```json
 {
   "success": true,
   "data": {
-    "count": 7
+    "count": 3
   }
 }
 ```
-
-This endpoint may be used to display a notification badge in the interface.
 
 ---
 
-# PATCH /notifications/:notificationId/read
-
-Marks a notification as read.
-
-### Permission
-
-Notification owner.
-
-### Request
-
-```http
-PATCH /api/v1/notifications/:notificationId/read
-```
-
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": "uuid",
-    "isRead": true
-  }
-}
-```
-
-### Errors
+# 58. Mark Notification Read
 
 ```text
-403 NOTIFICATION_ACCESS_DENIED
-404 NOTIFICATION_NOT_FOUND
+POST /api/v1/notifications/:notificationId/read
 ```
 
-The endpoint should be idempotent.
+Backend verifies Notification ownership.
 
-Marking an already-read notification as read must not produce an error.
+Sets:
+
+```text
+readAt = now
+```
+
+Repeated requests should be safe.
 
 ---
 
-# POST /notifications/read-all
+# 59. Mark All Notifications Read
 
-Marks all notifications belonging to the authenticated User as read.
-
-### Permission
-
-Organizer or Super Admin.
-
-### Request
-
-```http
+```text
 POST /api/v1/notifications/read-all
 ```
 
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "updated": 7
-  }
-}
-```
+Marks the authenticated User's current unread Notifications as read.
 
 ---
 
-# DELETE /notifications/:notificationId
+# 60. Super Admin Access
 
-Removes a notification from the User's notification feed.
-
-### Permission
-
-Notification owner.
-
-### Behavior
-
-The server shall:
-
-- Verify notification ownership.
-- Remove or soft-delete the notification according to retention policy.
-- Never allow one User to delete another User's notification.
-
-### Success Response
-
-```http
-204 No Content
-```
-
----
-
-# Notification Events
-
-Notifications may be created by domain events.
-
-Examples:
+Administrative endpoints use:
 
 ```text
-MEDIA_READY
-      ↓
-Notification Worker
-      ↓
-Organizer Notification
+/api/v1/admin
 ```
+
+All Admin endpoints require:
 
 ```text
-UPLOAD WINDOW OPENS
-        ↓
-Scheduler
-        ↓
-Notification Worker
-        ↓
-Organizer Notification
+Authenticated User
+AND
+role = SUPER_ADMIN
+AND
+active Session
+AND
+active User
 ```
+
+Frontend `/admin` routing is not security.
+
+---
+
+# 61. Admin Organizer List
 
 ```text
-EXPORT READY
-      ↓
-ZIP Worker
-      ↓
-Notification Worker
-      ↓
-Organizer Notification
+GET /api/v1/admin/organizers
 ```
+
+Returns Organizer accounts according to pagination/filter rules.
+
+Must not expose password hashes or Session secrets.
 
 ---
 
-# Media Upload Notifications
-
-The system should avoid generating one persistent notification for every individual photo.
-
-Example:
+# 62. Create Organizer
 
 ```text
-Guest uploads 47 photos
-
-BAD:
-47 separate notifications
-
-BETTER:
-"47 new memories were added to your album."
+POST /api/v1/admin/organizers
 ```
 
-Media notifications may therefore be grouped or aggregated.
-
----
-
-# Upload Window Notifications
-
-The Organizer may receive notifications when:
-
-- Upload Window becomes active.
-- Upload Window is approaching its closing time.
-- Upload Window closes.
-- Scheduled window fails to process an associated background action.
-
-The actual permission to upload is still determined by timestamps and Album state, not by the notification system.
-
----
-
-# Export Notifications
-
-When an Export reaches `READY`, the Organizer receives a notification.
-
-Example:
-
-```json
-{
-  "type": "ZIP_READY",
-  "title": "Your album is ready",
-  "message": "The Aziz & Malika archive is ready to download."
-}
-```
-
-The notification should reference the Export rather than contain a permanent download URL.
-
-A temporary download URL is generated only when requested through the Downloads API.
-
----
-
-# Real-Time Delivery
-
-For MVP, the frontend may retrieve notifications through normal API requests.
-
-Future versions may support:
-
-- Server-Sent Events
-- WebSockets
-- Browser Push
-- Mobile Push
-- Email
-
-The Notification model should remain independent from the delivery channel.
-
----
-
-# Notification Retention
-
-Notifications do not need to be stored permanently.
-
-The platform may automatically remove old notifications after a configurable retention period.
-
-Important system and security events should remain in Audit Logs rather than relying on Notifications for permanent history.
-
----
-
-# Notification Security
-
-The system shall:
-
-- Validate User ownership.
-- Never expose another User's notifications.
-- Never include authentication secrets.
-- Never store temporary signed download URLs inside notifications.
-- Sanitize dynamic notification content where required.
-
----
-
-# Notifications Authorization Matrix
-
-| Endpoint | Guest | Organizer | Super Admin |
-|---|:---:|:---:|:---:|
-| GET /notifications | — | ✓ | ✓ |
-| GET /notifications/unread-count | — | ✓ | ✓ |
-| PATCH /notifications/:id/read | — | Own | Own |
-| POST /notifications/read-all | — | ✓ | ✓ |
-| DELETE /notifications/:id | — | Own | Own |
-
----
-
-# Notifications Acceptance Criteria
-
-The module is complete when:
-
-- Authenticated Users can retrieve their notifications.
-- Cursor pagination works.
-- Notifications can be filtered by read status.
-- Unread count is available.
-- Individual notifications can be marked as read.
-- All notifications can be marked as read.
-- Users cannot access another User's notifications.
-- Media upload notifications can be aggregated.
-- ZIP completion can generate a notification.
-- Upload Window events can generate notifications.
-- Notifications do not contain permanent storage credentials or signed download URLs.
-
----
-
-# Admin API
-
-## Overview
-
-The Admin API provides platform-wide management functionality for Livara Super Admins.
-
-It is used to manage:
-
-- Organizers
-- Albums
-- Platform statistics
-- Storage usage
-- Deleted resources
-- User sessions
-- Administrative actions
-
-All Admin API endpoints require the `SUPER_ADMIN` role.
-
----
-
-# GET /admin/dashboard
-
-Returns platform-wide statistics for the Admin Dashboard.
-
-### Permission
-
-Super Admin only.
-
-### Request
-
-```http
-GET /api/v1/admin/dashboard
-```
-
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "users": {
-      "organizers": 42,
-      "activeOrganizers": 38
-    },
-    "albums": {
-      "total": 156,
-      "active": 27,
-      "archived": 112
-    },
-    "media": {
-      "photos": 184320,
-      "videos": 12840,
-      "total": 197160
-    },
-    "storage": {
-      "usedBytes": 879609302220
-    }
-  }
-}
-```
-
----
-
-# GET /admin/users
-
-Returns platform users.
-
-### Permission
-
-Super Admin only.
-
-### Query Parameters
-
-```text
-?limit=20
-?cursor=...
-?role=ORGANIZER
-?active=true
-?search=aziz
-```
-
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": "uuid",
-      "email": "organizer@example.com",
-      "firstName": "Aziz",
-      "lastName": "Karimov",
-      "role": "ORGANIZER",
-      "isActive": true,
-      "createdAt": "2026-08-01T10:00:00.000Z"
-    }
-  ],
-  "meta": {
-    "nextCursor": null,
-    "hasMore": false
-  }
-}
-```
-
----
-
-# POST /admin/users
-
-Creates an Organizer account.
-
-### Permission
-
-Super Admin only.
-
-### Request
+Example request:
 
 ```json
 {
   "email": "organizer@example.com",
-  "firstName": "Aziz",
-  "lastName": "Karimov",
-  "password": "temporary-password"
+  "password": "initial-password"
 }
 ```
 
-### Behavior
-
-The server shall:
-
-- Validate the email.
-- Ensure the email is unique.
-- Hash the password.
-- Create the User with role `ORGANIZER`.
-- Never return the password or password hash.
-
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": "uuid",
-    "email": "organizer@example.com",
-    "role": "ORGANIZER",
-    "isActive": true
-  }
-}
-```
-
-### Errors
+Backend:
 
 ```text
-400 INVALID_REQUEST
-409 EMAIL_ALREADY_EXISTS
+Validates email
+Hashes password
+Creates User(role = ORGANIZER)
+Creates AuditLog
 ```
+
+Initial password delivery/reset strategy must avoid exposing stored credentials later.
 
 ---
 
-# GET /admin/users/:userId
-
-Returns detailed information about an authenticated platform User.
-
-### Permission
-
-Super Admin only.
-
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": "uuid",
-    "email": "organizer@example.com",
-    "firstName": "Aziz",
-    "lastName": "Karimov",
-    "role": "ORGANIZER",
-    "isActive": true,
-    "lastLoginAt": "2026-09-10T14:20:00.000Z",
-    "createdAt": "2026-08-01T10:00:00.000Z"
-  }
-}
-```
-
----
-
-# PATCH /admin/users/:userId
-
-Updates an Organizer account.
-
-### Permission
-
-Super Admin only.
-
-### Request
-
-```json
-{
-  "firstName": "Aziz",
-  "lastName": "Karimov",
-  "email": "new@example.com"
-}
-```
-
-The server must restrict changes to protected fields such as administrative roles according to platform policy.
-
----
-
-# POST /admin/users/:userId/suspend
-
-Suspends a User account.
-
-### Permission
-
-Super Admin only.
-
-### Behavior
-
-The server shall:
-
-- Set the account as inactive.
-- Prevent new authentication.
-- Revoke active sessions.
-- Preserve Albums and Media.
-
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": "uuid",
-    "isActive": false
-  }
-}
-```
-
----
-
-# POST /admin/users/:userId/activate
-
-Reactivates a suspended User account.
-
-### Permission
-
-Super Admin only.
-
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": "uuid",
-    "isActive": true
-  }
-}
-```
-
----
-
-# POST /admin/users/:userId/revoke-sessions
-
-Revokes all active sessions belonging to a User.
-
-### Permission
-
-Super Admin only.
-
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "sessionsRevoked": true
-  }
-}
-```
-
----
-
-# GET /admin/albums
-
-Returns Albums across the entire platform.
-
-### Permission
-
-Super Admin only.
-
-### Query Parameters
+# 63. Suspend Organizer
 
 ```text
-?limit=20
-?cursor=...
-?status=ACTIVE
-?organizerId=uuid
-?search=aziz
+POST /api/v1/admin/organizers/:userId/suspend
 ```
 
-### Success Response
+Backend:
 
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": "uuid",
-      "title": "Aziz & Malika",
-      "organizerId": "uuid",
-      "eventDate": "2026-09-12T15:00:00.000Z",
-      "status": "ACTIVE",
-      "mediaCount": 914
-    }
-  ],
-  "meta": {
-    "nextCursor": null,
-    "hasMore": false
-  }
-}
+```text
+User.status = SUSPENDED
+Revoke active Sessions
+Create AuditLog
 ```
 
-Album creation, modification, archival, restoration, and deletion continue to use the existing Albums API.
-
-The Admin API does not duplicate those resource operations unnecessarily.
+Albums and Media remain preserved.
 
 ---
 
-# POST /admin/albums/:albumId/reassign
+# 64. Reactivate Organizer
 
-Assigns an Album to another Organizer.
+```text
+POST /api/v1/admin/organizers/:userId/reactivate
+```
 
-### Permission
+Backend:
 
-Super Admin only.
+```text
+User.status = ACTIVE
+Create AuditLog
+```
 
-### Request
+Old revoked Sessions do not become active again.
+
+Organizer must authenticate through a valid new/current mechanism.
+
+---
+
+# 65. Admin Album List
+
+```text
+GET /api/v1/admin/albums
+```
+
+Provides platform-wide Album management with pagination and filters.
+
+---
+
+# 66. Admin Create Album
+
+```text
+POST /api/v1/admin/albums
+```
+
+Example:
 
 ```json
 {
-  "organizerId": "uuid"
+  "organizerId": "...",
+  "title": "Aziz & Malika",
+  "eventDate": "2026-09-12T00:00:00.000Z",
+  "timezone": "Asia/Tashkent",
+  "status": "ACTIVE"
 }
 ```
 
-### Behavior
+Backend:
 
-The server shall:
+```text
+Validates Organizer
+Creates unique publicIdentifier
+Creates Album
+Creates AuditLog
+```
 
-- Verify the Album.
-- Verify the target Organizer.
-- Verify the target account is active.
-- Update Album ownership.
-- Record the administrative action.
+An initial Upload Window may either be included through a transactional creation DTO or created through the Upload Window endpoint immediately after Album creation.
 
-### Success Response
+Implementation must choose one consistent flow.
+
+---
+
+# 67. Admin Protected Album Update
+
+```text
+PATCH /api/v1/admin/albums/:albumId
+```
+
+May modify protected fields where authorized:
+
+```text
+title
+eventDate
+timezone
+status
+organizerId
+```
+
+`publicIdentifier` should preferably use a dedicated rotation operation because changing it affects QR codes and shared links.
+
+Every sensitive change should create appropriate Audit history.
+
+---
+
+# 68. Reassign Album
+
+Album reassignment may use:
+
+```text
+POST /api/v1/admin/albums/:albumId/reassign
+```
+
+Request:
+
+```json
+{
+  "organizerId": "new-organizer-id"
+}
+```
+
+Backend verifies the new User is an eligible Organizer.
+
+Authorization changes take effect immediately.
+
+The old Organizer's existing Livara Session may remain valid for their account but no longer authorizes this Album.
+
+---
+
+# 69. Public Identifier Rotation
+
+Because rotation can invalidate existing QR codes:
+
+```text
+POST /api/v1/admin/albums/:albumId/rotate-public-identifier
+```
+
+requires explicit Super Admin action.
+
+Backend:
+
+```text
+Generates new identifier
+Updates Album
+Creates AuditLog
+```
+
+The API should not allow accidental rotation through generic Album updates.
+
+---
+
+# 70. Delete Album
+
+```text
+DELETE /api/v1/admin/albums/:albumId
+```
+
+Requires Super Admin.
+
+For recoverable Album:
+
+```text
+deletedAt = now
+```
+
+Guest access becomes unavailable.
+
+Organizer normal access becomes unavailable.
+
+Child resources are not immediately physically destroyed.
+
+---
+
+# 71. Recover Album
+
+```text
+POST /api/v1/admin/albums/:albumId/recover
+```
+
+Requires Super Admin.
+
+Recovery must return the Album to a safe state.
+
+It must not blindly reopen uploads.
+
+Backend must evaluate related Upload Windows according to recovery policy.
+
+---
+
+# 72. Admin Audit Logs
+
+```text
+GET /api/v1/admin/audit-logs
+```
+
+Requires Super Admin.
+
+Possible filters:
+
+```text
+actorUserId
+albumId
+action
+targetType
+targetId
+date range
+```
+
+Uses pagination.
+
+Audit records are read-oriented and not editable through normal API operations.
+
+---
+
+# 73. Admin Storage Overview
+
+```text
+GET /api/v1/admin/storage
+```
+
+May provide derived platform storage information.
+
+This endpoint must not expose:
+
+```text
+R2 secret keys
+internal credentials
+```
+
+Storage statistics may be calculated or aggregated according to implementation.
+
+---
+
+# 74. QR Access Data
+
+Organizer may retrieve the Guest Album URL:
+
+```text
+GET /api/v1/albums/:albumId/qr
+```
+
+Example:
 
 ```json
 {
   "success": true,
   "data": {
-    "albumId": "uuid",
-    "organizerId": "uuid"
+    "guestUrl": "https://...",
+    "publicIdentifier": "..."
   }
 }
 ```
 
+The frontend may generate QR visuals from this URL.
+
 ---
 
-# GET /admin/storage
+# 75. QR Materials
 
-Returns platform storage statistics.
+If Livara generates printable QR materials server-side:
 
-### Permission
-
-Super Admin only.
-
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "totalBytes": 879609302220,
-    "originalsBytes": 751619276800,
-    "optimizedBytes": 85899345920,
-    "thumbnailsBytes": 10737418240,
-    "archivesBytes": 32212254720
-  }
-}
+```text
+POST /api/v1/albums/:albumId/qr-materials
 ```
 
-Values may be calculated asynchronously or retrieved from cached platform metrics.
+may create a PDF generation request.
+
+Simple MVP QR generation may instead happen synchronously if inexpensive.
+
+QR material generation must not create a new Album identifier unless explicitly requested through Admin rotation.
 
 ---
 
-# GET /admin/deleted/albums
+# 76. Cursor Pagination
 
-Returns soft-deleted Albums that are still within the recovery period.
-
-### Permission
-
-Super Admin only.
-
----
-
-# POST /admin/deleted/albums/:albumId/recover
-
-Recovers a soft-deleted Album.
-
-### Permission
-
-Super Admin only.
-
-### Behavior
-
-The server shall:
-
-- Verify the recovery period.
-- Verify required data still exists.
-- Clear `deletedAt`.
-- Restore the Album to a safe non-uploading state.
-
-Restoration must not automatically open Guest uploads.
-
----
-
-# GET /admin/deleted/media
-
-Returns recoverable soft-deleted Media.
-
-### Permission
-
-Super Admin only.
-
-Existing Media recovery operations may then be used to restore individual items.
-
----
-
-# Administrative Audit
-
-Every sensitive administrative action shall be recorded.
+Large collection endpoints should use cursor pagination.
 
 Examples:
 
-- User created
-- User suspended
-- User reactivated
-- Sessions revoked
-- Album created
-- Album reassigned
-- Protected Album information changed
-- Album recovered
-- Media recovered
-
-An audit event should record, where applicable:
-
-- Actor
-- Action
-- Target resource
-- Timestamp
-- Relevant metadata
-
-Audit history must be separate from normal User notifications.
-
----
-
-# Admin Security
-
-Admin endpoints shall:
-
-- Require authentication.
-- Require `SUPER_ADMIN`.
-- Apply strict authorization checks.
-- Apply rate limiting where appropriate.
-- Record sensitive operations.
-- Never trust role information supplied by the client.
-- Never expose passwords, hashes, secrets, or storage credentials.
-
-High-impact operations may require additional confirmation in future versions.
-
----
-
-# Admin Authorization Matrix
-
-| Capability | Organizer | Super Admin |
-|---|:---:|:---:|
-| Platform dashboard | — | ✓ |
-| View all Users | — | ✓ |
-| Create Organizer | — | ✓ |
-| Suspend Organizer | — | ✓ |
-| Revoke User sessions | — | ✓ |
-| View all Albums | — | ✓ |
-| Reassign Album | — | ✓ |
-| Change protected Album data | — | ✓ |
-| View platform storage | — | ✓ |
-| Recover deleted Albums | — | ✓ |
-| Recover deleted Media | — | ✓ |
-| View administrative audit history | — | ✓ |
-
----
-
-# Admin Acceptance Criteria
-
-The module is complete when:
-
-- Super Admin can manage Organizer accounts.
-- Organizer accounts can be suspended and reactivated.
-- Suspended Users cannot authenticate.
-- Active sessions can be revoked.
-- Super Admin can view all Albums.
-- Albums can be reassigned between Organizers.
-- Super Admin can change protected Album information through authorized Album operations.
-- Platform statistics are available.
-- Storage usage can be inspected.
-- Recoverable Albums and Media can be managed.
-- Sensitive administrative actions are recorded.
-- Organizer cannot access Admin endpoints.
-
----
-
-# Health API
-
-## Overview
-
-The Health API provides service health information for deployment, monitoring, and infrastructure checks.
-
-Health endpoints are not part of the normal user-facing product API.
-
----
-
-# GET /health
-
-Returns the basic availability of the Livara API.
-
-### Permission
-
-Public.
-
-### Request
-
-```http
-GET /api/v1/health
+```text
+GET /albums/:id/media
+GET /guest/albums/:publicIdentifier/media
+GET /notifications
+GET /admin/albums
+GET /admin/audit-logs
 ```
 
-### Success Response
+Typical query:
+
+```text
+?limit=30&cursor=...
+```
+
+Response:
 
 ```json
 {
-  "status": "ok",
-  "timestamp": "2026-07-26T18:30:00.000Z"
-}
-```
-
-This endpoint should remain lightweight and should not perform expensive dependency checks.
-
----
-
-# GET /health/ready
-
-Determines whether the application is ready to receive traffic.
-
-### Permission
-
-Infrastructure only where possible.
-
-### Checks
-
-The server may verify:
-
-- PostgreSQL connectivity
-- Redis connectivity
-- Queue availability
-- Required application configuration
-
-### Success Response
-
-```json
-{
-  "status": "ready",
-  "checks": {
-    "database": "ok",
-    "redis": "ok",
-    "queue": "ok"
+  "pagination": {
+    "nextCursor": "..."
   }
 }
 ```
 
-If a critical dependency is unavailable, the endpoint should return:
+Cursor format is an API implementation detail and should be treated as opaque by clients.
 
-```http
-503 Service Unavailable
+---
+
+# 77. Pagination Limits
+
+The backend defines:
+
+```text
+default limit
+maximum limit
+```
+
+Clients must not be able to request an unbounded Gallery such as:
+
+```text
+?limit=1000000
+```
+
+Exact numeric limits belong in configuration/API implementation.
+
+---
+
+# 78. Sorting
+
+Endpoints should expose only supported sorting options.
+
+Clients must not send arbitrary SQL column names.
+
+Example:
+
+```text
+?sort=newest
+```
+
+rather than:
+
+```text
+?orderBy=whatever_database_column
+```
+
+where arbitrary input could leak persistence implementation.
+
+---
+
+# 79. Filtering
+
+Filters should represent product concepts.
+
+Example Organizer Media filters:
+
+```text
+type=IMAGE
+status=READY
+visibility=HIDDEN
+```
+
+Backend maps them to database queries.
+
+---
+
+# 80. Idempotency
+
+Operations vulnerable to duplicate client retries should support idempotent behavior.
+
+Important examples:
+
+```text
+Upload completion
+Export creation where duplicate submission matters
+Administrative actions where network retry could duplicate effects
+```
+
+An `Idempotency-Key` header may be introduced for selected POST operations.
+
+The server must scope and expire idempotency records appropriately.
+
+Exact persistence strategy will be defined during implementation.
+
+---
+
+# 81. Concurrency
+
+API operations must remain safe under concurrent requests.
+
+Example:
+
+```text
+Organizer hides Media
+at the same time
+Worker marks processing READY
+```
+
+Result must preserve both independent dimensions:
+
+```text
+status = READY
+visibility = HIDDEN
+```
+
+Workers must not overwrite unrelated fields.
+
+---
+
+# 82. Rate Limiting
+
+Rate limiting should be applied according to endpoint risk.
+
+Sensitive examples:
+
+```text
+POST /auth/login
+POST /guest/.../session
+POST /guest/.../uploads
+POST /albums/.../exports
+Admin mutation endpoints
+```
+
+Guest rate limiting must account for many Guests sharing one event Wi-Fi/IP.
+
+IP alone should not represent Guest identity.
+
+---
+
+# 83. Upload Limits
+
+File restrictions should be configured centrally.
+
+Possible rules:
+
+```text
+Allowed MIME types
+Maximum image size
+Maximum video size
+Maximum files per upload intent
+Guest rate limits
+Album/package storage limits
+```
+
+Client validation may mirror these limits for UX.
+
+Backend validation remains authoritative.
+
+---
+
+# 84. Upload Security
+
+Temporary upload authorization must:
+
+```text
+Expire quickly
+Target one expected object
+Use server-generated storage key
+Respect expected operation
+Avoid permanent credentials
+```
+
+The Guest must not choose arbitrary R2 storage paths.
+
+---
+
+# 85. Download Security
+
+Temporary download access must:
+
+```text
+Expire
+Follow authorization checks
+Reference expected object
+Avoid permanent storage credentials
+```
+
+Knowing:
+
+```text
+originalStorageKey
+```
+
+must not itself grant access.
+
+Storage keys should normally remain internal.
+
+---
+
+# 86. CSRF
+
+If authenticated state-changing requests rely on cookies, the API must implement appropriate CSRF protection.
+
+Possible mechanisms:
+
+```text
+SameSite cookie policy
+Origin validation
+CSRF token
+```
+
+according to deployment architecture.
+
+Authentication alone does not automatically solve CSRF.
+
+---
+
+# 87. CORS
+
+Production API must accept browser requests only from required Livara origins.
+
+Credentialed wildcard CORS is prohibited.
+
+Development origins are configured separately.
+
+---
+
+# 88. Guest Album Privacy
+
+Guest endpoints must expose only information needed for the Guest experience.
+
+Do not expose:
+
+```text
+Organizer email
+User IDs unnecessarily
+Audit Logs
+Storage keys
+Admin state
+Internal errors
+Deleted Media
+Hidden Media
+```
+
+The unlisted public identifier provides entry, not administrative authority.
+
+---
+
+# 89. Not Found vs Forbidden
+
+For sensitive resource lookups, the API may intentionally return:
+
+```text
+404 Not Found
+```
+
+instead of revealing that a protected resource exists but belongs to another Organizer.
+
+The policy should remain consistent.
+
+---
+
+# 90. Audit Integration
+
+Sensitive mutation endpoints create Audit Logs.
+
+Examples:
+
+```text
+Create Organizer
+Suspend Organizer
+Reactivate Organizer
+Create Album
+Update protected Album data
+Reassign Album
+Rotate publicIdentifier
+Delete Album
+Recover Album
+Recover Media
+```
+
+Audit logging should occur as part of the same reliable application operation where possible.
+
+---
+
+# 91. Notifications Integration
+
+Product events may create Notifications.
+
+Examples:
+
+```text
+Export READY
+Export FAILED
+Aggregated Media activity
+Important Upload Window event
+```
+
+Notification creation may happen synchronously for simple cases or through BullMQ for aggregated/background events.
+
+---
+
+# 92. API and Queue Boundary
+
+HTTP API creates persistent state before relying on background jobs.
+
+Correct:
+
+```text
+Create Export row = QUEUED
+      ↓
+Commit
+      ↓
+Queue job
+```
+
+If queue delivery fails, the persistent Export still exists and can be reconciled.
+
+Critical product state must not exist only inside BullMQ.
+
+---
+
+# 93. Queue Reconciliation
+
+Because Redis/BullMQ is not the product source of truth, the system should allow recovery of stranded work.
+
+Examples:
+
+```text
+Media status = UPLOADED
+but processing job missing
+
+Export status = QUEUED
+but queue job missing
+```
+
+A reconciliation process may identify and requeue eligible persistent records.
+
+---
+
+# 94. API DTO Principle
+
+Every endpoint uses explicit request and response DTOs.
+
+Do not expose Prisma models directly.
+
+Example:
+
+```text
+Prisma User
+├── id
+├── email
+├── passwordHash
+├── role
+└── ...
+
+API UserResponse
+├── id
+├── email
+├── role
+└── status
+```
+
+Sensitive persistence fields never leave the backend accidentally.
+
+---
+
+# 95. Protected DTO Principle
+
+Organizer DTOs and Super Admin DTOs are different.
+
+Example:
+
+```text
+OrganizerAlbumSettingsDto
+```
+
+must not contain:
+
+```text
+organizerId
+publicIdentifier
+eventDate
+title
+```
+
+if those fields are protected.
+
+Admin DTOs may expose authorized mutation fields explicitly.
+
+---
+
+# 96. Timezone Handling
+
+API timestamps use ISO 8601.
+
+Example:
+
+```text
+2026-09-19T13:00:00.000Z
+```
+
+Album also exposes its IANA timezone:
+
+```text
+Asia/Tashkent
+```
+
+Frontend uses the Album timezone for event-local presentation and input conversion.
+
+Backend persists timestamps consistently in UTC.
+
+---
+
+# 97. Health Endpoints
+
+Infrastructure endpoints may include:
+
+```text
+GET /health
+GET /health/live
+GET /health/ready
+```
+
+These may exist outside `/api/v1` because they represent deployment infrastructure rather than product API.
+
+Health responses must not reveal credentials or sensitive infrastructure topology.
+
+---
+
+# 98. API Documentation
+
+The NestJS API should generate machine-readable API documentation.
+
+Recommended:
+
+```text
+OpenAPI
+```
+
+Documentation should describe:
+
+```text
+Routes
+DTOs
+Authentication
+Response structures
+Errors
+Enums
+```
+
+Internal/admin documentation may be protected in production.
+
+---
+
+# 99. API Naming
+
+Use consistent resource naming.
+
+Preferred:
+
+```text
+/albums
+/media
+/exports
+/notifications
+/upload-windows
+/audit-logs
+```
+
+Avoid mixing styles such as:
+
+```text
+/uploadWindows
+/getAlbums
+/create_export
+```
+
+HTTP method already communicates the action for normal CRUD operations.
+
+Action endpoints are appropriate when representing domain operations such as:
+
+```text
+/hide
+/recover
+/reassign
+/rotate-public-identifier
 ```
 
 ---
 
-# GET /health/live
+# 100. API Versioning Rules
 
-Determines whether the application process is running.
+Breaking contract changes require a new API version or controlled migration strategy.
 
-### Permission
+Non-breaking additions may remain within:
 
-Infrastructure only where possible.
-
-### Success Response
-
-```json
-{
-  "status": "alive"
-}
+```text
+v1
 ```
 
-The liveness check should not depend on PostgreSQL, Redis, R2, or other external services.
+Examples of potentially breaking changes:
 
-Its purpose is to determine whether the application process itself is responsive.
-
----
-
-# Health Endpoint Security
-
-Health endpoints shall:
-
-- Never expose credentials.
-- Never expose environment variables.
-- Never expose database connection strings.
-- Never expose internal stack traces.
-- Return only information required for infrastructure monitoring.
-
-Detailed internal diagnostics should not be publicly accessible.
+```text
+Removing response fields
+Changing field meaning
+Changing authentication behavior
+Changing enum semantics
+Changing endpoint ownership rules
+```
 
 ---
 
-# Health Acceptance Criteria
+# 101. Core Guest API Summary
 
-The module is complete when:
+```text
+GET
+/guest/albums/:publicIdentifier
 
-- API availability can be checked.
-- Liveness can be checked independently from external dependencies.
-- Readiness reflects critical dependency availability.
-- Dependency failures can return `503 Service Unavailable`.
-- Health responses never expose sensitive infrastructure information.
+POST
+/guest/albums/:publicIdentifier/session
+
+GET
+/guest/albums/:publicIdentifier/media
+
+GET
+/guest/albums/:publicIdentifier/media/:mediaId
+
+POST
+/guest/albums/:publicIdentifier/uploads
+
+POST
+/guest/albums/:publicIdentifier/uploads/:mediaId/complete
+
+GET
+/guest/albums/:publicIdentifier/uploads/:mediaId
+```
+
+This is enough to support:
+
+```text
+QR
+→ Album
+→ Guest Session
+→ Gallery
+→ Upload
+→ Processing
+→ Shared Memory
+```
+
+---
+
+# 102. Core Organizer API Summary
+
+```text
+GET
+/albums
+
+GET
+/albums/:albumId
+
+GET
+/albums/:albumId/overview
+
+GET
+/albums/:albumId/upload-windows
+
+POST
+/albums/:albumId/upload-windows
+
+PATCH
+/albums/:albumId/upload-windows/:windowId
+
+DELETE
+/albums/:albumId/upload-windows/:windowId
+
+GET
+/albums/:albumId/media
+
+GET
+/albums/:albumId/media/:mediaId
+
+POST
+/albums/:albumId/media/:mediaId/hide
+
+POST
+/albums/:albumId/media/:mediaId/restore-visibility
+
+DELETE
+/albums/:albumId/media/:mediaId
+
+GET
+/albums/:albumId/media/:mediaId/download
+
+POST
+/albums/:albumId/exports
+
+GET
+/albums/:albumId/exports
+
+GET
+/albums/:albumId/exports/:exportId
+
+GET
+/albums/:albumId/exports/:exportId/download
+
+GET
+/albums/:albumId/qr
+
+GET
+/notifications
+
+GET
+/notifications/unread-count
+
+POST
+/notifications/:notificationId/read
+
+POST
+/notifications/read-all
+```
+
+---
+
+# 103. Core Admin API Summary
+
+```text
+GET
+/admin/organizers
+
+POST
+/admin/organizers
+
+POST
+/admin/organizers/:userId/suspend
+
+POST
+/admin/organizers/:userId/reactivate
+
+GET
+/admin/albums
+
+POST
+/admin/albums
+
+PATCH
+/admin/albums/:albumId
+
+POST
+/admin/albums/:albumId/reassign
+
+POST
+/admin/albums/:albumId/rotate-public-identifier
+
+DELETE
+/admin/albums/:albumId
+
+POST
+/admin/albums/:albumId/recover
+
+POST
+/admin/media/:mediaId/recover
+
+GET
+/admin/audit-logs
+
+GET
+/admin/storage
+```
+
+Additional administrative read endpoints may be introduced as the Admin Dashboard is implemented.
+
+---
+
+# 104. API Acceptance Criteria
+
+API v1 is valid when:
+
+- All product endpoints live under a consistent version
+- User authentication is separate from Guest Sessions
+- Organizer and Super Admin authentication uses persistent Session state
+- Raw tokens are never returned/stored unnecessarily
+- Every protected endpoint performs backend authorization
+- Organizer can access only assigned Albums
+- Guest Session is scoped to one Album
+- Guest can enter an Album without traditional registration
+- Guest endpoints expose only Guest-safe data
+- Upload permission is derived from Upload Windows
+- No API endpoint introduces `uploadsEnabled` as competing truth
+- Organizer cannot directly modify protected Album fields
+- Super Admin has explicit protected mutation operations
+- Direct-to-R2 upload is supported
+- Upload Intent validates permission before issuing storage access
+- Each selected file may succeed or fail independently
+- Upload completion is safely retryable
+- Media processing remains asynchronous
+- Media status and visibility remain independent
+- Deletion remains independent from visibility
+- Guest Gallery returns only READY + VISIBLE + non-deleted Media
+- Large collections use pagination
+- Downloads use temporary authorized access
+- Exports are asynchronous
+- Selected exports validate relational Media ownership
+- Notifications are user-scoped
+- Audit Logs are separate from Notifications
+- Album recovery does not automatically reopen uploads
+- Rate limits account for shared event networks
+- DTOs prevent persistence fields from leaking
+- Stable error codes are used
+- Critical persistent state exists in PostgreSQL before asynchronous processing
+- Queue loss can be reconciled from persistent state
+- API remains compatible with future self-service onboarding
+
+---
+
+# 105. Complete API Flow
+
+The central Guest flow:
+
+```text
+QR
+ ↓
+GET Guest Album
+ ↓
+Create / Restore Guest Session
+ ↓
+GET Gallery
+ ↓
+Guest Selects Media
+ ↓
+POST Upload Intent
+ ↓
+API checks:
+Album
+Guest
+Upload Window
+File Limits
+ ↓
+Media = PENDING
+ ↓
+Temporary R2 Upload Access
+ ↓
+Phone ─────────────→ R2
+ ↓
+POST Complete
+ ↓
+Media = UPLOADED
+ ↓
+BullMQ
+ ↓
+Worker
+ ↓
+PROCESSING
+ ↓
+READY
+ ↓
+Gallery
+```
+
+Organizer:
+
+```text
+Login
+ ↓
+Dashboard
+ ↓
+Album
+ ├── Gallery Management
+ ├── Upload Windows
+ ├── Downloads
+ ├── Exports
+ ├── QR
+ └── Notifications
+```
+
+Super Admin:
+
+```text
+Login
+ ↓
+Admin
+ ├── Organizers
+ ├── Albums
+ ├── Protected Changes
+ ├── Recovery
+ ├── Storage
+ └── Audit
+```
+
+---
+
+# 106. API Summary
+
+Livara API v1 separates three access models:
+
+```text
+SUPER_ADMIN
+ORGANIZER
+GUEST
+```
+
+and preserves the core architecture:
+
+```text
+Client
+  ↓
+NestJS API
+  ↓
+PostgreSQL
+
+Media Binary
+  ↓
+Cloudflare R2
+
+Long-running Work
+  ↓
+Redis / BullMQ
+  ↓
+Workers
+```
+
+The API controls permissions and product state.
+
+PostgreSQL stores product truth.
+
+R2 stores Media.
+
+BullMQ coordinates asynchronous work.
+
+The client provides interaction, not authority.
+
+The resulting API supports Livara's core experience:
+
+**Relive your event through every guest's eyes.**
+
+**Every guest becomes a storyteller.**

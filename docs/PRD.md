@@ -1,1280 +1,1157 @@
-# Product Requirements Document
+# Livara Product Requirements Document
 
 **Project:** Livara
 
-**Version:** 1.0
+**Document Type:** Product Requirements Document
+
+**Product Stage:** MVP
+
+**Document Version:** 1.0
+
+> 🇷🇺
+> Этот документ определяет продуктовые требования Livara MVP.
+>
+> Он описывает, какие возможности должна предоставлять платформа, какие роли существуют, какие ограничения действуют и каким критериям должен соответствовать готовый MVP.
+>
+> Техническая реализация этих требований определяется отдельно в Architecture, Database и API документации.
 
 ---
 
-# Product Overview
+# 1. Product Summary
 
-Livara is a modern event photo-sharing platform that enables organizers and guests to collect, share, and preserve memories from real-life events.
+Livara is an event memory platform that allows people to collectively capture, share, and preserve photos and videos from meaningful events.
 
-Instead of relying on messaging apps or social media, Livara provides one centralized album where every guest can contribute photos and videos through a simple QR code.
+Guests enter an Event Album through a QR code or shared link, browse memories contributed by others, and upload their own during allowed periods.
 
-The platform is designed to work without requiring guests to create an account, making the sharing experience fast, accessible, and frictionless.
+Organizers manage the resulting collection through a dedicated dashboard.
 
----
+Livara complements professional photography by preserving spontaneous moments and perspectives from everyone who experienced the event.
 
-## Core Value Proposition
-
-One QR Code.
-
-One Shared Album.
-
-Every Memory Together.
-
----
-
-# Problem Statement
-
-Today, event memories are scattered across dozens of phones.
-
-Guests take hundreds of photos and videos, but after the event:
-
-- many files are never shared;
-- media is lost over time;
-- organizers spend days asking guests to send photos;
-- messaging apps compress image quality;
-- there is no single place where all memories are preserved.
-
-Livara solves this problem by creating one shared digital space where everyone contributes to the same event album.
+> 🇷🇺
+> Livara — платформа для совместного сбора, просмотра и сохранения фотографий и видео с важных событий.
+>
+> Гости попадают в Event Album через QR-код или ссылку, смотрят воспоминания других участников и добавляют свои в разрешённые периоды.
+>
+> Organizer управляет собранными материалами через отдельный Dashboard.
+>
+> Livara дополняет профессиональную фотографию живыми моментами и взглядами людей, которые были частью события.
 
 ---
 
-# Goals
+# 2. Product Goal
 
-The product should:
+The goal of the MVP is to provide a complete event-memory experience from Album creation to long-term access.
 
-- Preserve every event memory.
-- Make uploading effortless.
-- Remove the need for guest registration.
-- Support thousands of media files.
-- Allow organizers to manage albums easily.
-- Keep memories available for years.
+The MVP must allow Livara to:
 
----
+- Create and configure an Event Album
+- Give the Organizer secure management access
+- Give Guests simple QR-based access
+- Collect photos and videos
+- Present shared Media through a Gallery
+- Control when new Media may be uploaded
+- Allow Organizer moderation
+- Allow Media downloading and Album exports
+- Preserve the Album after the event
 
-# Functional Requirements
+The product must be usable for real weddings and events.
 
-# Album Management
-
-## Description
-
-Albums are the core entity of Livara.
-
-Every event is represented by a single album where guests can upload, browse, and preserve memories.
-
-Each album has one organizer and can contain thousands of photos and videos.
+> 🇷🇺
+> Цель MVP — обеспечить полный жизненный цикл цифровых воспоминаний мероприятия: от создания Album до его использования после события.
+>
+> Продукт должен быть пригоден для реальных свадеб и мероприятий, а не только для демонстрации концепции.
 
 ---
 
-## User Story
+# 3. Core Product Experience
 
-As an Organizer,
+The central product experience is:
 
-I want to have one dedicated album for my event,
+```text
+Livara Creates Event
+        ↓
+Organizer Receives Access
+        ↓
+QR Code Is Prepared
+        ↓
+Guests Scan QR
+        ↓
+Guests View Gallery
+        ↓
+Guests Upload Memories
+        ↓
+Shared Album Grows
+        ↓
+Organizer Moderates
+        ↓
+Uploads Close
+        ↓
+Gallery Remains Available
+        ↓
+Optional Later Upload Window
+        ↓
+Long-Term Event Memory
+```
 
-so that every guest can contribute their memories in one place.
-
----
-
-## Functional Requirements
-
-### Album Creation
-
-The system shall:
-
-- Create a unique album.
-- Generate a unique Album ID.
-- Generate a QR Code.
-- Generate a public sharing link.
-- Assign an organizer.
-- Apply default settings.
-- Create an empty gallery.
-
----
-
-### Album Information
-
-Each album shall contain:
-
-- Album ID
-- Title
-- Description
-- Cover Image
-- Event Date
-- Event Location
-- Organizer
-- Album Status
-- Created Date
-- Last Updated Date
+The product should make this flow feel simple even when the underlying system is complex.
 
 ---
 
-### Album Settings
+# 4. Product Roles
 
-The organizer shall be able to:
+The MVP has three primary roles:
 
-- Change album title.
-- Change description.
-- Change cover image.
-- Enable or disable uploads.
-- Configure upload windows.
-- Enable or disable downloads.
-- Enable or disable guest names.
-- Enable or disable comments (future).
-- Archive the album.
+```text
+SUPER_ADMIN
+ORGANIZER
+GUEST
+```
 
 ---
 
-### Album Status
+# 5. Super Admin Requirements
 
-An album can have one of the following statuses:
+Super Admin represents Livara administration.
 
-- Created
-- Configured
-- Shared
-- Active
-- Scheduled Uploads
-- Archived
+The Super Admin must be able to:
 
----
+- Authenticate securely
+- Access the Admin Dashboard
+- Create Organizer accounts
+- View Organizer accounts
+- Suspend and reactivate Organizer accounts
+- Create Albums
+- Assign Albums to Organizers
+- View Albums across the platform
+- Modify protected Album information
+- Reassign Albums
+- Access platform statistics
+- Inspect platform storage usage
+- Recover supported deleted resources
+- Perform administrative support actions
 
-### Acceptance Criteria
+Protected Album information includes:
 
-An album is considered successfully created when:
+```text
+Event Title
+Event Date
+Album Owner
+Public Identifier
+```
 
-- Album ID exists.
-- QR Code is generated.
-- Public link works.
-- Organizer has access.
-- Gallery is ready for uploads.
+Only authorized Super Admin operations may modify these fields during the managed MVP business stage.
 
----
-
-# QR Code Sharing
-
-## Description
-
-Every album is automatically assigned a unique QR Code and public sharing link.
-
-Guests can instantly join the album by scanning the QR Code without creating an account.
-
-The QR Code serves as the primary entry point to the album before, during, and after the event.
-
----
-
-## User Story
-
-As a Guest,
-
-I want to scan a QR Code and immediately access the event album,
-
-so that I can upload and view memories without any registration.
+> 🇷🇺
+> Super Admin представляет администрацию Livara.
+>
+> Он создаёт клиентов и Album, назначает Organizer, управляет защищёнными данными мероприятия и выполняет административные операции.
+>
+> На этапе MVP название события, дата, владелец Album и публичный идентификатор не изменяются Organizer самостоятельно.
 
 ---
 
-## Functional Requirements
+# 6. Organizer Requirements
 
-### QR Generation
+Organizer manages one or more Albums assigned to their account.
 
-The system shall:
+The Organizer must be able to:
 
-- Automatically generate a unique QR Code for every album.
-- Generate a public sharing URL.
-- Ensure every QR Code is unique.
-- Regenerate the QR Code if the public link changes.
+- Authenticate
+- Access their Dashboard
+- View their Albums
+- Open an Album management interface
+- View Album information
+- View Gallery Media
+- View Media details
+- Hide Media from Guests
+- Restore hidden Media
+- Delete Media where permitted
+- Manage Upload Windows
+- Download original Media
+- Request selected Media exports
+- Request full Album exports
+- Access QR materials
+- View relevant notifications
+- Configure settings explicitly permitted to Organizer
 
----
+Organizer must not be able to:
 
-### QR Usage
+- Access another Organizer's private management resources
+- Change Event Title directly
+- Change Event Date directly
+- Change Album ownership
+- Change protected public identifiers
+- Access Super Admin functionality
 
-Guests shall be able to:
-
-- Scan the QR Code using any smartphone camera.
-- Open the album directly in a browser.
-- Join without creating an account.
-- Return to the album later using the same link.
-
----
-
-### Organizer Actions
-
-The organizer shall be able to:
-
-- Download the QR Code.
-- Print the QR Code.
-- Share the QR Code as an image.
-- Copy the public link.
-
----
-
-### Validation
-
-The system shall:
-
-- Reject invalid album links.
-- Reject deleted album links.
-- Display an appropriate error page if the album is unavailable.
+> 🇷🇺
+> Organizer управляет своим Album и его содержимым.
+>
+> Он может модерировать Media, управлять периодами загрузки, скачивать материалы и получать QR.
+>
+> При этом Organizer не может самостоятельно менять название события, дату, владельца или защищённый публичный идентификатор.
 
 ---
 
-### Acceptance Criteria
+# 7. Guest Requirements
 
-The feature is complete when:
+Guests must be able to use the core Livara experience without creating a traditional account.
 
-- Every album has a unique QR Code.
-- Every QR Code opens the correct album.
-- Guests can join without registration.
-- The public link works on all modern devices.
+A Guest must be able to:
 
----
+- Enter an Album through QR or shared link
+- View basic event information
+- Browse visible Media
+- Open individual photos and videos
+- Upload supported Media during an active Upload Window
+- Receive understandable upload feedback
+- Return to the same Album later
 
-# Upload Windows
+The Guest experience must prioritize low friction.
 
-## Description
-
-Upload Windows allow organizers to control when guests can upload photos and videos.
-
-Instead of keeping uploads permanently open or permanently closed, organizers can create multiple scheduled upload periods for different stages of an event.
-
-This feature supports multi-day and recurring celebrations while keeping the gallery organized.
-
----
-
-## User Story
-
-As an Organizer,
-
-I want to schedule multiple upload periods,
-
-so that guests can continue sharing memories from related events without leaving uploads permanently open.
+> 🇷🇺
+> Для участия в основном сценарии Guest не должен проходить обычную регистрацию.
+>
+> Гость открывает Album через QR или ссылку, смотрит воспоминания и добавляет свои, если загрузка в данный момент разрешена.
 
 ---
 
-## Functional Requirements
+# 8. Album Requirements
 
-### Upload Window Creation
+Album is the central product resource.
 
-The organizer shall be able to:
+Each Album must represent one primary event and its related memory lifecycle.
 
-- Create unlimited upload windows.
-- Assign a custom name.
-- Select a start date and time.
-- Select an end date and time.
-- Edit an existing upload window.
-- Delete an upload window.
+An Album must contain or reference:
 
----
-
-### Upload Window Status
-
-Each upload window shall have one of the following states:
-
-- Scheduled
-- Active
-- Closed
-- Cancelled
-
-The system shall automatically update the status based on the current date and time.
-
----
-
-### Upload Permissions
-
-Guests shall:
-
-- Upload media only while an upload window is Active.
-- Continue browsing the gallery even if uploads are closed.
-- Receive an appropriate message when uploads are unavailable.
-
----
-
-### Organizer Controls
-
-The organizer shall be able to:
-
-- Open uploads immediately.
-- Close uploads immediately.
-- Extend an upload window.
-- End an upload window early.
-
----
-
-### Validation Rules
-
-The system shall:
-
-- Prevent overlapping upload windows.
-- Require every upload window to have a valid start and end time.
-- Prevent an end time earlier than the start time.
-- Automatically close expired upload windows.
-
----
-
-### Notifications
-
-The system may notify guests when:
-
-- A new upload window opens.
-- An upload window is about to close.
-- Uploads have been closed.
-
----
-
-### Acceptance Criteria
-
-The feature is complete when:
-
-- Organizers can create and manage upload windows.
-- Uploads automatically open and close according to schedule.
-- Guests cannot upload outside active windows.
-- Guests can always view the gallery unless restricted by album settings.
-
----
-
-# Media Upload
-
-## Description
-
-Media Upload is the core functionality of Livara.
-
-Guests can upload photos and videos to an event album during active upload windows.
-
-The system should provide a fast, reliable, and intuitive uploading experience across desktop and mobile devices.
-
----
-
-## User Story
-
-As a Guest,
-
-I want to quickly upload photos and videos,
-
-so that my memories become part of the shared event album.
-
----
-
-## Functional Requirements
-
-### Supported Media
-
-The system shall support:
-
-- Photos
-- Videos
-
-Supported image formats:
-
-- JPG
-- JPEG
-- PNG
-- HEIC (future)
-- WEBP (future)
-
-Supported video formats:
-
-- MP4
-- MOV
-
----
-
-### Upload Methods
-
-Guests shall be able to:
-
-- Select files manually.
-- Select multiple files.
-- Drag and drop files (Desktop).
-- Upload directly from mobile devices.
-
----
-
-### Upload Process
-
-During upload, the system shall:
-
-- Display upload progress.
-- Display upload percentage.
-- Show upload status.
-- Allow upload cancellation.
-- Retry failed uploads.
-
----
-
-### File Validation
-
-Before upload, the system shall validate:
-
-- File type
-- File size
-- Corrupted files
-- Empty files
-- Unsupported formats
-
-Invalid files shall not be uploaded.
-
----
-
-### Upload States
-
-Each upload shall have one of the following states:
-
-- Waiting
-- Uploading
-- Processing
-- Completed
-- Failed
-- Cancelled
-
----
-
-### Processing
-
-After upload, the system shall:
-
-- Store the original file.
-- Generate thumbnails.
-- Extract metadata.
-- Optimize previews.
-- Prepare files for gallery display.
-
----
-
-### Duplicate Handling
-
-The system should detect duplicate uploads.
-
-Duplicate detection may use:
-
-- File hash
-- File size
-- Metadata
-
-Future improvements may include image similarity detection.
-
----
-
-### Offline Behavior
-
-If the network connection is interrupted:
-
-- Uploads should pause.
-- Uploads should resume automatically when possible.
-- Failed uploads should remain available for retry.
-
----
-
-### Organizer Permissions
-
-The organizer shall be able to:
-
-- View uploaded media.
-- Delete uploaded media.
-- Approve uploaded media (future moderation mode).
-
----
-
-### Acceptance Criteria
-
-The feature is complete when:
-
-- Photos upload successfully.
-- Videos upload successfully.
-- Multiple uploads work correctly.
-- Progress is displayed.
-- Failed uploads can be retried.
-- Gallery updates after successful upload.
-
----
-
-# Gallery
-
-## Description
-
-The Gallery is the central place where all approved event photos and videos are displayed.
-
-It allows guests to relive the event through everyone's perspective while giving organizers full control over the displayed content.
-
-The gallery should remain fast and responsive even when containing thousands of media files.
-
----
-
-## User Story
-
-As a Guest,
-
-I want to browse all event photos and videos in one place,
-
-so that I can relive the event and discover moments captured by other guests.
-
----
-
-## Functional Requirements
-
-### Gallery View
-
-The system shall:
-
-- Display photos and videos in chronological order by default.
-- Load media progressively for smooth browsing.
-- Display thumbnails before loading full-resolution media.
-- Support infinite scrolling.
-- Display upload date and time for each media item.
-
----
-
-### Media Viewer
-
-Guests shall be able to:
-
-- Open photos in full screen.
-- Play videos directly in the gallery.
-- Swipe between media on mobile devices.
-- Navigate using previous and next controls on desktop.
-
----
-
-### Gallery Performance
-
-The system shall:
-
-- Lazy-load media as users scroll.
-- Cache thumbnails for faster loading.
-- Optimize gallery performance for albums containing thousands of files.
-
----
-
-### Organizer Controls
-
-The organizer shall be able to:
-
-- Delete media.
-- Hide media from the gallery.
-- Restore hidden media.
-- View upload information.
-
----
-
-### Empty Gallery
-
-If no media has been uploaded, the system shall display:
-
-- A friendly empty state.
-- Instructions for uploading media.
-- The album QR Code (optional).
-
----
-
-### Acceptance Criteria
-
-The feature is complete when:
-
-- Photos display correctly.
-- Videos play correctly.
-- Infinite scrolling works.
-- Full-screen viewer functions properly.
-- Gallery remains responsive with large albums.
-
----
-
-# Organizer Dashboard
-
-## Description
-
-The Organizer Dashboard is the central control panel for managing an event album.
-
-It provides organizers with real-time access to album information, uploaded media, guest activity, upload windows, and album settings.
-
-The dashboard should allow organizers to manage the entire lifecycle of an album from a single interface.
-
----
-
-## User Story
-
-As an Organizer,
-
-I want one place where I can manage every aspect of my event,
-
-so that I can monitor uploads, configure settings, and keep the album organized.
-
----
-
-## Functional Requirements
-
-### Dashboard Overview
-
-The dashboard shall display:
-
-- Album title
-- Album cover
-- Album status
+- Event title
 - Event date
-- Event location
-- QR Code
-- Public sharing link
-
----
-
-### Statistics
-
-The dashboard shall display:
-
-- Total guests
-- Total photos
-- Total videos
-- Total uploads
-- Total storage used
-- Active upload window
-- Last upload time
-
----
-
-### Media Management
-
-The organizer shall be able to:
-
-- View all uploaded media
-- Search media
-- Delete media
-- Hide media
-- Restore hidden media
-- View upload details
-
----
-
-### Upload Window Management
-
-The organizer shall be able to:
-
-- Create upload windows
-- Edit upload windows
-- Delete upload windows
-- Open uploads immediately
-- Close uploads immediately
-
----
-
-### QR Management
-
-The organizer shall be able to:
-
-- View QR Code
-- Download QR Code
-- Print QR Code
-- Copy album link
-- Share album link
-
----
-
-### Album Settings
-
-The organizer shall be able to configure:
-
-- Album title
-- Description
-- Cover image
-- Privacy settings
-- Upload permissions
-- Download permissions
-- Guest name visibility
-- Archive album
-
----
-
-### Download Center
-
-The organizer shall be able to:
-
-- Download individual files
-- Download selected files
-- Download the entire album
-- Export media as a ZIP archive
-
----
-
-### Acceptance Criteria
-
-The feature is complete when:
-
-- The organizer can manage the album without leaving the dashboard.
-- Statistics update automatically.
-- Media management functions correctly.
-- Album settings are saved successfully.
-- Download options work correctly.
-
----
-
-# Guest Experience
-
-## Description
-
-The Guest Experience is designed to be simple, fast, and frictionless.
-
-Guests should be able to access an album, browse memories, and upload photos or videos without creating an account.
-
-Every interaction should require as few steps as possible.
-
----
-
-## User Story
-
-As a Guest,
-
-I want to scan a QR Code and immediately start sharing my memories,
-
-so that I don't need to register or install an application.
-
----
-
-## Functional Requirements
-
-### Album Access
-
-Guests shall be able to:
-
-- Join an album by scanning a QR Code.
-- Join using a public link.
-- Access the album without creating an account.
-- Return to the album later using the same link.
-
----
-
-### Gallery Browsing
-
-Guests shall be able to:
-
-- Browse photos.
-- Browse videos.
-- Open media in full screen.
-- Swipe between media on mobile devices.
-- Watch uploaded videos.
-
----
-
-### Media Upload
-
-Guests shall be able to:
-
-- Upload one photo.
-- Upload multiple photos.
-- Upload videos.
-- Cancel uploads.
-- Retry failed uploads.
-
-Uploads shall only be available during active upload windows.
-
----
-
-### Guest Identity
-
-Depending on album settings, guests may:
-
-- Upload anonymously.
-- Enter their name before uploading.
-- Reuse the previously entered name on the same device.
-
----
-
-### Upload Feedback
-
-The system shall provide:
-
-- Upload progress.
-- Upload success confirmation.
-- Error messages.
-- Validation messages for unsupported files.
-
----
-
-### Album Availability
-
-Guests shall:
-
-- Continue viewing the gallery after uploads close.
-- Receive a message if uploads are unavailable.
-- Receive a message if the album has been archived.
-
----
-
-### Acceptance Criteria
-
-The feature is complete when:
-
-- Guests can access the album without registration.
-- Guests can upload media during active upload windows.
-- Guests receive clear feedback during uploads.
-- Gallery browsing remains available after uploads close.
-
----
-
-# Permissions & Privacy
-
-## Description
-
-Livara uses a role-based permission system to ensure that each user can only perform actions appropriate to their role.
-
-Privacy settings allow organizers to control how guests interact with an album while maintaining a simple and secure experience.
-
----
-
-## User Roles
-
-The platform supports three primary roles:
-
-- Super Admin
 - Organizer
-- Guest
+- Public Guest access identifier
+- Album status
+- Media collection
+- Upload Windows
+- Album settings
+- Creation and update information
 
-Each role has different permissions within the system.
+An Album may remain available after its main event date.
 
----
+One Album may support multiple Upload Windows.
 
-## Super Admin Permissions
-
-The Super Admin shall be able to:
-
-- Create albums
-- Delete albums
-- Archive albums
-- Restore archived albums
-- Assign organizers
-- View all albums
-- Manage platform settings
-- Access platform analytics
-- Manage storage usage
-- Suspend albums if necessary
+> 🇷🇺
+> Album — центральная сущность продукта.
+>
+> Он представляет одно основное мероприятие и связанную с ним историю воспоминаний.
+>
+> Album не обязан завершаться после даты свадьбы и может продолжать использоваться для связанных событий.
 
 ---
 
-## Organizer Permissions
+# 9. Album Access Model
 
-The Organizer shall be able to:
+MVP Albums use an **unlisted Guest access model**.
 
-- Edit album information
-- Manage upload windows
-- Share the album
-- Download media
-- Delete uploaded media
-- Hide or restore media
-- Configure album settings
-- Archive the album
-- View album statistics
+Requirements:
 
-The Organizer shall not be able to:
+- Guest access must be possible through QR code or shared link
+- Guest access must not require a traditional account
+- Albums must not be publicly discoverable through a general Livara directory
+- Albums should not be intentionally indexed by search engines
+- Public identifiers must be difficult to guess
+- Management interfaces must remain separately authenticated and authorized
 
-- Access other organizers' albums
-- Change platform-wide settings
+A publicly reachable URL does not make an Album publicly discoverable.
 
----
-
-## Guest Permissions
-
-Guests shall be able to:
-
-- View the gallery (if enabled)
-- Upload photos and videos during active upload windows
-- Revisit the album using the same link
-
-Guests shall not be able to:
-
-- Delete media
-- Edit album settings
-- View dashboard statistics
-- Download the full album unless permitted
+> 🇷🇺
+> Album в MVP работает по модели unlisted.
+>
+> Гость может открыть его через QR или ссылку, но Album не должен находиться через публичный каталог Livara или обычный поиск.
+>
+> Административный доступ Organizer при этом защищён отдельной авторизацией.
 
 ---
 
-## Album Privacy Settings
+# 10. Album Status
 
-The Organizer shall be able to configure:
+The product must distinguish the lifecycle state of an Album from whether uploads are currently available.
 
-- Public or private album
-- Enable or disable uploads
-- Enable or disable downloads
-- Require guest names
-- Allow anonymous uploads
-- Show or hide guest names
-- Show or hide upload timestamps
+Possible Album states may include:
 
----
+```text
+DRAFT
+ACTIVE
+ARCHIVED
+DELETED
+```
 
-## Access Control
+Exact technical enum values are defined in technical documentation.
 
-The system shall:
+Album status and Upload Window status are separate concepts.
 
-- Validate permissions before every protected action.
-- Prevent unauthorized access to organizer functions.
-- Prevent guests from accessing administrative endpoints.
-- Return appropriate error responses for unauthorized requests.
+For example:
 
----
+```text
+Album = ACTIVE
+Upload Window = CLOSED
+Gallery = AVAILABLE
+```
 
-## Acceptance Criteria
+This is a valid product state.
 
-The feature is complete when:
-
-- Each role has the correct permissions.
-- Unauthorized actions are blocked.
-- Privacy settings are applied immediately.
-- Album access behaves according to the selected configuration.
+> 🇷🇺
+> Состояние самого Album и возможность загрузки — разные понятия.
+>
+> Активный Album может оставаться доступным для просмотра даже тогда, когда новые фотографии временно нельзя добавлять.
 
 ---
 
-# Notifications
+# 11. Upload Window Requirements
 
-## Description
+Upload Windows determine when Guests may contribute new Media.
 
-The notification system keeps organizers and guests informed about important events and actions within an album.
+An Album must support multiple Upload Windows.
 
-Notifications should be timely, relevant, and non-intrusive.
-
----
-
-## User Story
-
-As a User,
-
-I want to receive important updates about the album,
-
-so that I always know when I can upload media, when uploads are completed, and when changes occur.
-
----
-
-## Functional Requirements
-
-### Organizer Notifications
-
-The organizer shall receive notifications when:
-
-- A guest uploads new media.
-- An upload window opens.
-- An upload window is about to close.
-- An upload window closes.
-- Storage usage reaches warning thresholds.
-- A ZIP archive is ready for download.
-- An upload fails due to a system error.
-
----
-
-### Guest Notifications
-
-Guests may receive notifications when:
-
-- A new upload window opens.
-- An upload window is about to close.
-- Their upload completes successfully.
-- Their upload fails.
-- Uploads are currently unavailable.
-- The album has been archived.
-
----
-
-### System Notifications
-
-The system shall generate notifications for:
-
-- Successful uploads.
-- Failed uploads.
-- Invalid file formats.
-- File size exceeded.
-- Album unavailable.
-- Permission denied.
-- Network connection lost.
-- Upload resumed after reconnection.
-
----
-
-### Notification Delivery
-
-The platform shall support:
-
-- In-app notifications.
-- Browser notifications (optional).
-- Email notifications (future).
-- Push notifications (future mobile application).
-
----
-
-### Notification Behavior
-
-The system shall:
-
-- Display notifications in real time where possible.
-- Prevent duplicate notifications.
-- Automatically dismiss temporary success messages.
-- Keep critical notifications visible until acknowledged.
-
----
-
-### Acceptance Criteria
-
-The feature is complete when:
-
-- Users receive relevant notifications.
-- Failed actions generate appropriate error messages.
-- Success messages confirm completed actions.
-- Duplicate notifications are not displayed.
-
----
-
-# Storage & File Management
-
-## Description
-
-Livara stores all uploaded media securely while maintaining fast access and efficient storage usage.
-
-The platform preserves original media files and generates optimized versions for gallery viewing.
-
----
-
-## User Story
-
-As an Organizer,
-
-I want all uploaded media to be stored safely,
-
-so that memories remain available without losing quality.
-
----
-
-## Functional Requirements
-
-### File Storage
-
-The system shall:
-
-- Store original media files.
-- Store optimized preview versions.
-- Store thumbnails for gallery browsing.
-- Organize files by album.
-- Assign a unique identifier to every uploaded file.
-
----
-
-### File Processing
-
-After a successful upload, the system shall:
-
-- Validate the file.
-- Store the original file.
-- Generate thumbnails.
-- Generate optimized preview images.
-- Extract metadata (when available).
-- Mark the file as ready for display.
-
----
-
-### Supported File Types
-
-Images:
-
-- JPG
-- JPEG
-- PNG
-- HEIC (future)
-- WEBP (future)
-
-Videos:
-
-- MP4
-- MOV
-
----
-
-### File Limits
-
-The system shall define configurable limits for:
-
-- Maximum image size.
-- Maximum video size.
-- Maximum upload size per request.
-- Maximum storage per album (optional).
-
-These values should be configurable by administrators.
-
----
-
-### File Organization
-
-Every uploaded file shall belong to:
+Each Upload Window must define at least:
 
 - Album
-- Upload Window
-- Guest (if available)
+- Start time
+- End time
+- State derived from time and validity
 
-Each file shall contain:
+Example:
 
-- File ID
-- File Name
-- File Type
-- MIME Type
-- File Size
-- Upload Time
-- Processing Status
-- Storage Path
+```text
+Wedding
+12 September
+OPEN
 
----
+↓
 
-### File Deletion
+13–18 September
+CLOSED
 
-When media is deleted:
+↓
 
-- The gallery shall no longer display the file.
-- The original file shall be marked for deletion.
-- Preview files shall also be removed.
-- The action shall be logged.
+Chilla
+19 September
+OPEN
 
-Future versions may support file recovery.
+↓
 
----
+After
+CLOSED
+```
 
-### Export
+The same Album and QR remain in use.
 
-The Organizer shall be able to:
-
-- Download individual files.
-- Download selected files.
-- Download the complete album as a ZIP archive.
-
-The system shall generate archives asynchronously for large albums.
+> 🇷🇺
+> Upload Window определяет период, когда гости могут загружать новые воспоминания.
+>
+> Один Album может иметь несколько таких периодов — например, свадьба, а затем Чилла или другое связанное событие.
+>
+> Для этого не создаётся новый Album и не требуется новый QR.
 
 ---
 
-### Acceptance Criteria
+# 12. Upload Permission
 
-The feature is complete when:
+Guest upload permission must be determined by valid Album access and an active Upload Window.
 
-- Original files are stored successfully.
-- Preview images are generated.
-- Thumbnails are generated.
-- Deleted files are removed correctly.
-- Album export functions correctly.
+The product must not rely on a second independent manual boolean that can contradict Upload Window state.
 
----
+Conceptually:
 
-# Security
+```text
+CAN_UPLOAD =
+Album available
+AND
+Active Upload Window exists
+AND
+Guest is allowed
+AND
+Platform restrictions allow upload
+```
 
-## Description
+Closing an Upload Window must not automatically make the Gallery unavailable.
 
-Security is a fundamental aspect of Livara.
-
-The platform must protect user data, uploaded media, and system resources while maintaining a simple and seamless experience for organizers and guests.
-
----
-
-## User Story
-
-As a User,
-
-I want my data and uploaded media to be secure,
-
-so that I can trust Livara with my event memories.
+> 🇷🇺
+> Upload Windows должны быть основным источником истины для определения того, разрешена ли загрузка.
+>
+> Не должно быть отдельного независимого переключателя, который может говорить «загрузка включена», когда Upload Window уже закрыт.
 
 ---
 
-## Functional Requirements
+# 13. Guest Session Requirements
 
-### Authentication
+Livara must be able to recognize a Guest within an Album without requiring a traditional User account.
 
-The system shall:
+Guest sessions must:
 
-- Authenticate Organizers and Super Admins.
-- Allow Guests to access albums without creating an account.
-- Protect organizer-only functionality.
+- Be scoped to an Album
+- Be created with minimal Guest interaction
+- Allow the Guest experience to continue across requests
+- Avoid exposing sensitive session credentials
+- Expire according to platform policy
 
----
+Guest identity must remain separate from authenticated Organizer and Super Admin accounts.
 
-### Authorization
-
-The system shall:
-
-- Validate user permissions before every protected action.
-- Restrict administrative endpoints.
-- Prevent unauthorized access to private albums.
-
----
-
-### Album Access
-
-The system shall support:
-
-- Public album links.
-- Private album links (future).
-- Secure QR Code access.
-- Album availability checks.
+> 🇷🇺
+> Livara должна уметь распознавать гостя внутри конкретного Album без создания обычного аккаунта.
+>
+> Guest Session используется для удобства и безопасности гостевого сценария и не является полноценной пользовательской учётной записью.
 
 ---
 
-### File Security
+# 14. QR Requirements
 
-Before storing uploaded media, the system shall:
+Each Album must have Guest access suitable for QR representation.
 
-- Validate file type.
-- Validate MIME type.
-- Reject unsupported file formats.
-- Reject corrupted files.
-- Reject empty files.
+QR functionality must allow:
 
-Future versions may include malware scanning.
+- Guests to reach the correct Album
+- The same QR to remain valid across multiple Upload Windows
+- QR use during and after the main event
+- Multiple visual QR designs pointing to the same Album
 
----
+The QR design itself may vary without changing the Album identity.
 
-### Rate Limiting
-
-The system shall:
-
-- Limit excessive upload requests.
-- Prevent spam uploads.
-- Protect public endpoints from abuse.
-- Protect authentication endpoints from brute-force attacks.
+> 🇷🇺
+> QR-код является одним из главных способов входа в Album.
+>
+> Можно создавать несколько визуальных дизайнов QR для столов, приглашений и декора, но все они могут вести в один и тот же Album.
 
 ---
 
-### Data Protection
+# 15. Gallery Requirements
 
-The system shall:
+Each Album must provide a Guest-facing Gallery.
 
-- Encrypt sensitive data in transit.
-- Use HTTPS for all communication.
-- Store passwords using secure hashing algorithms.
-- Never expose internal storage paths.
+The Gallery must:
 
----
+- Show Media permitted for Guest viewing
+- Support photos
+- Support supported video formats
+- Load progressively
+- Support large collections through pagination or equivalent behavior
+- Exclude deleted Media
+- Exclude hidden Media
+- Exclude failed Media
+- Exclude unfinished Media
+- Remain available when uploads are closed, provided the Album itself remains available
 
-### Audit Logging
-
-The system shall record important actions including:
-
-- Album creation
-- Album deletion
-- Album archive
-- Media upload
-- Media deletion
-- Login attempts
-- Permission changes
-
----
-
-### Error Handling
-
-The system shall:
-
-- Return secure error messages.
-- Avoid exposing internal implementation details.
-- Log unexpected server errors.
+> 🇷🇺
+> Галерея показывает гостям только те материалы, которые готовы и разрешены для просмотра.
+>
+> Закрытие загрузки не должно автоматически закрывать галерею.
 
 ---
 
-### Acceptance Criteria
+# 16. Media Requirements
 
-The feature is complete when:
+Livara must support Media contributed to an Album.
 
-- Unauthorized actions are blocked.
-- Uploaded files are validated.
-- Sensitive data is protected.
-- Security events are logged.
+Each Media item must be associated with:
+
+- Album
+- Uploading Guest or relevant source where applicable
+- Media type
+- Processing status
+- Visibility state
+- Original file information
+- Storage references
+- Creation time
+
+Supported MVP Media categories:
+
+```text
+IMAGE
+VIDEO
+```
+
+The system must distinguish Media processing status from Media visibility.
+
+Example:
+
+```text
+status = READY
+visibility = HIDDEN
+```
+
+This means the Media was processed successfully but is intentionally hidden from Guests.
+
+> 🇷🇺
+> Состояние обработки Media и его видимость — разные вещи.
+>
+> Файл может быть полностью готов, но скрыт Organizer от гостей.
 
 ---
 
+# 17. Media Processing Requirements
+
+Uploaded Media may require processing before appearing in the Gallery.
+
+The product must support states representing at least:
+
+```text
+Uploading / Pending
+Processing
+Ready
+Failed
+Deleted
+```
+
+Exact technical states are defined in technical documentation.
+
+A Media item must not become publicly visible before it is ready.
+
+Processing failures must not break unrelated Media.
+
+> 🇷🇺
+> После загрузки файл может проходить обработку.
+>
+> До завершения обработки он не должен появляться в гостевой галерее.
+>
+> Ошибка одного файла не должна влиять на остальные загрузки.
+
+---
+
+# 18. Upload Requirements
+
+Guests must be able to select and upload supported photos and videos.
+
+The upload experience must:
+
+- Validate supported file types
+- Validate configured size limits
+- Verify upload permission
+- Support multiple selected files
+- Treat files independently
+- Provide upload progress where appropriate
+- Report failures clearly
+- Allow successful files to continue when another file fails
+- Avoid routing large file payloads unnecessarily through application servers where architecture permits direct storage upload
+
+> 🇷🇺
+> Гость должен иметь возможность выбрать несколько фотографий или видео.
+>
+> Каждый файл проходит собственную проверку и загрузку.
+>
+> Ошибка одного файла не должна отменять успешную загрузку остальных.
+
+---
+
+# 19. Media Visibility
+
+Organizer must be able to control whether valid Media is visible to Guests.
+
+At minimum:
+
+```text
+VISIBLE
+HIDDEN
+```
+
+Visibility changes must not require destroying the original file.
+
+Hidden Media:
+
+- Must disappear from Guest Gallery
+- May remain visible in authorized Organizer interfaces
+- May be restored where permitted
+
+> 🇷🇺
+> Organizer может скрыть нежелательное фото или видео от гостей без немедленного удаления оригинала.
+>
+> Скрытый материал можно восстановить, если он остаётся действительным.
+
+---
+
+# 20. Media Deletion
+
+Livara must support safe Media deletion.
+
+For resources covered by recovery policy, deletion should initially behave as soft deletion.
+
+Soft-deleted Media must:
+
+- Disappear from normal Gallery views
+- Become unavailable through normal Guest access
+- Be recoverable by authorized administration during the recovery period
+- Be permanently cleaned later according to retention policy
+
+> 🇷🇺
+> Удаление Media должно быть безопасным.
+>
+> Если действует период восстановления, файл сначала скрывается из обычной системы и только позже удаляется окончательно.
+
+---
+
+# 21. Media Moderation
+
+Organizer must be able to moderate Album content.
+
+Required moderation capabilities:
+
+```text
+View
+Hide
+Restore
+Delete
+Download
+```
+
+Super Admin may have broader recovery and administrative capabilities.
+
+Advanced automatic moderation is not required for MVP.
+
+---
+
+# 22. Single Media Download
+
+Authorized users must be able to download original Media where product permissions allow.
+
+Downloads must:
+
+- Respect authorization
+- Respect Media availability
+- Avoid exposing storage credentials
+- Provide access only for an appropriate period
+
+Guest download behavior may be controlled by Album settings.
+
+> 🇷🇺
+> Скачивание оригиналов должно происходить только после проверки прав.
+>
+> Пользователь не должен получать постоянные ключи или доступ к внутреннему хранилищу Livara.
+
+---
+
+# 23. Album Export Requirements
+
+Organizer must be able to request downloadable archives.
+
+MVP should support:
+
+```text
+Selected Media Export
+Full Album Export
+```
+
+Large exports may require background generation.
+
+Organizer must be able to understand whether an export is:
+
+```text
+Queued
+Processing
+Ready
+Failed
+Expired
+```
+
+Completed export archives may be temporary.
+
+> 🇷🇺
+> Organizer может запросить ZIP выбранных материалов или всего Album.
+>
+> Большие архивы не обязаны создаваться мгновенно. Пользователь должен видеть состояние подготовки и скачать готовый архив, пока он доступен.
+
+---
+
+# 24. Notifications
+
+Livara should provide Organizer notifications for meaningful events.
+
+Relevant notification types may include:
+
+- New Media activity
+- Upload Window changes
+- Export completion
+- Important system events
+
+Media activity should be aggregated where appropriate.
+
+Example:
+
+```text
+"47 new memories were added."
+```
+
+rather than 47 separate notifications.
+
+Notifications are not a permanent audit history.
+
+> 🇷🇺
+> Organizer может получать уведомления о важных событиях.
+>
+> При массовой загрузке Livara не должна создавать десятки одинаковых уведомлений — события можно объединять.
+
+---
+
+# 25. Admin Dashboard
+
+Super Admin must have a platform-level interface.
+
+The Admin Dashboard should provide access to:
+
+- Organizer management
+- Album management
+- Platform statistics
+- Storage information
+- Recoverable resources
+- Administrative actions
+
+The exact visual design is outside the scope of this document.
+
+---
+
+# 26. Organizer Dashboard
+
+Organizer must have a dedicated management interface.
+
+It should provide access to:
+
+```text
+Album Overview
+Gallery Management
+Upload Windows
+Downloads / Exports
+QR Materials
+Notifications
+Permitted Settings
+```
+
+The interface must not expose platform-wide administrative controls.
+
+---
+
+# 27. Protected Album Information
+
+The following information is protected during the managed MVP stage:
+
+```text
+Event Title
+Event Date
+Album Owner
+Public Identifier
+```
+
+Organizer must not directly modify these values.
+
+Required flow:
+
+```text
+Organizer Requests Change
+        ↓
+Livara Reviews Request
+        ↓
+Super Admin Updates Album
+```
+
+This policy may evolve when Livara introduces self-service onboarding.
+
+> 🇷🇺
+> На этапе MVP защищённые данные изменяются через администрацию Livara.
+>
+> Это соответствует текущей бизнес-модели, где Livara самостоятельно создаёт и настраивает мероприятия после оплаты.
+
+---
+
+# 28. Organizer Account Suspension
+
+Super Admin must be able to suspend an Organizer account.
+
+Suspension must:
+
+- Prevent new Organizer authentication
+- Revoke or invalidate active authenticated sessions
+- Preserve Albums
+- Preserve Media
+- Avoid automatically deleting customer resources
+
+Reactivation must be possible.
+
+---
+
+# 29. Authentication Requirements
+
+Organizer and Super Admin access must require authentication.
+
+Authentication must provide:
+
+- Secure login
+- Session continuation
+- Logout
+- Logout from all sessions where supported
+- Session revocation
+- Role-based authorization
+
+Passwords and authentication secrets must never be returned through product interfaces.
+
+Guests use a separate Guest access/session model.
+
+---
+
+# 30. Authorization Requirements
+
+Every protected operation must verify authorization on the server.
+
+The frontend must never be considered the source of truth for permissions.
+
+At minimum:
+
+```text
+Super Admin
+→ Platform-wide administrative access
+
+Organizer
+→ Authorized Albums assigned to that Organizer
+
+Guest
+→ Guest experience for the accessed Album
+```
+
+Possession of an internal resource ID alone must never grant protected access.
+
+---
+
+# 31. Privacy Requirements
+
+Livara handles personal event Media and must treat it as private user content.
+
+The MVP must:
+
+- Avoid public discovery of unlisted Albums
+- Avoid exposing storage credentials
+- Restrict Organizer resources to authorized accounts
+- Prevent Guests from accessing hidden or deleted Media
+- Avoid leaking internal infrastructure information
+- Avoid indexing event Albums as intentionally public content
+
+Future versions may introduce stronger Album access options.
+
+---
+
+# 32. Search Engine Requirements
+
+Guest Albums should not be designed for search engine discovery.
+
+Where applicable, the product should discourage indexing of Guest Album pages.
+
+Marketing pages and public Livara content may remain indexable separately.
+
+> 🇷🇺
+> Страницы самих мероприятий не предназначены для поисковой выдачи.
+>
+> Это не относится к маркетинговому сайту Livara, который может индексироваться отдельно.
+
+---
+
+# 33. Performance Requirements
+
+The Guest experience must remain usable on mobile devices and typical event internet connections.
+
+The product should prioritize:
+
+- Fast initial Album access
+- Progressive Gallery loading
+- Efficient Media delivery
+- Optimized images where appropriate
+- Background processing for expensive operations
+- Avoiding synchronous generation of large exports
+
+Exact performance targets may be defined later through production measurements.
+
+---
+
+# 34. Mobile Experience
+
+Guest experience must be mobile-first.
+
+Primary Guest actions must work well on modern mobile browsers:
+
+```text
+Scan QR
+Open Album
+Browse Gallery
+Select Media
+Upload Media
+View Upload Status
+Return Later
+```
+
+A native mobile application is not required for MVP.
+
+> 🇷🇺
+> Основной Guest-сценарий происходит со смартфона, поэтому мобильная версия является приоритетной.
+>
+> Отдельное приложение для iOS или Android для MVP не требуется.
+
+---
+
+# 35. Reliability Requirements
+
+The product must handle expected failures gracefully.
+
+Examples include:
+
+- Upload failure
+- Media processing failure
+- Temporary storage failure
+- Export generation failure
+- Expired Guest session
+- Invalid Album URL
+
+Failures should provide understandable user-facing behavior without exposing technical internals.
+
+---
+
+# 36. Data Recovery
+
+Where recovery is supported, Livara must distinguish between user-facing deletion and final physical cleanup.
+
+Super Admin should be able to recover supported soft-deleted resources during the configured recovery period.
+
+Recovery must not automatically enable Guest uploads.
+
+> 🇷🇺
+> Восстановление удалённого Album не должно автоматически открывать загрузку для гостей.
+>
+> После восстановления система должна перейти в безопасное состояние.
+
+---
+
+# 37. Audit Requirements
+
+Sensitive administrative operations should have a durable audit history.
+
+Examples:
+
+- Organizer created
+- Organizer suspended
+- Album created
+- Album reassigned
+- Protected Album information changed
+- Deleted resource recovered
+- Sessions revoked
+
+Audit history is separate from Notifications.
+
+> 🇷🇺
+> Важные административные действия должны оставлять историю.
+>
+> Audit Log отвечает на вопрос «кто и что изменил», а Notification — «что нужно показать пользователю».
+
+---
+
+# 38. Storage Requirements
+
+Livara must preserve original Media according to product and retention rules.
+
+The system may additionally create:
+
+- Optimized images
+- Thumbnails
+- Video derivatives
+- Temporary ZIP archives
+
+Temporary generated resources may have shorter retention than original event Media.
+
+---
+
+# 39. QR Design Requirements
+
+Livara should support attractive QR materials suitable for real events.
+
+The product may provide multiple QR designs for:
+
+- Wedding tables
+- Invitations
+- Welcome boards
+- Posters
+- Digital sharing
+
+QR presentation should communicate the Guest benefit.
+
+Example:
+
+```text
+Relive the wedding through everyone's eyes.
+
+Scan to discover and share memories.
+```
+
+> 🇷🇺
+> QR должен выглядеть как часть мероприятия, а не как техническая наклейка.
+>
+> В будущем Livara может иметь библиотеку дизайнов для разных типов мероприятий.
+
+---
+
+# 40. Localization
+
+Livara should be designed with localization in mind.
+
+The initial product should support the languages required for its primary market.
+
+User-facing text must not be hardcoded in a way that prevents future localization.
+
+Exact launch languages are a product decision and may evolve independently from the core architecture.
+
+> 🇷🇺
+> Архитектура интерфейса должна учитывать мультиязычность с самого начала.
+>
+> Добавление новых языков не должно требовать переписывания основных функций продукта.
+
+---
+
+# 41. MVP Scope
+
+The MVP includes the capabilities necessary to deliver the core Livara experience:
+
+```text
+Authentication
+Super Admin
+Organizer Accounts
+Albums
+Unlisted Guest Access
+Guest Sessions
+QR Access
+Upload Windows
+Photo Upload
+Video Upload
+Media Processing
+Gallery
+Media Moderation
+Downloads
+Album Exports
+Organizer Dashboard
+Admin Dashboard
+Basic Notifications
+Soft Delete / Recovery
+```
+
+The exact implementation order is defined in the Roadmap.
+
+---
+
+# 42. Out of Scope for MVP
+
+The following are not required for the initial MVP unless later promoted into scope:
+
+```text
+Native iOS application
+Native Android application
+AI photo recognition
+Face recognition
+Automatic guest identification
+Advanced social network features
+Comments
+Likes
+Public user profiles
+Public event discovery
+Livestreaming
+Advanced automated moderation
+White-label platform
+Full self-service billing
+Marketplace
+Complex CRM
+```
+
+These features may be considered after the core product has been validated.
+
+---
+
+# 43. Future Self-Service
+
+The architecture should allow Livara to evolve from managed onboarding to self-service.
+
+Future customers may be able to:
+
+```text
+Register
+Choose Package
+Pay
+Create Event
+Configure Album
+Generate QR
+Manage Event
+```
+
+MVP should not unnecessarily couple core Album functionality to manual Super Admin creation.
+
+> 🇷🇺
+> Сейчас Livara вручную подключает клиентов.
+>
+> Но фундамент продукта должен позволять в будущем автоматизировать покупку и создание мероприятия без полной перестройки системы.
+
+---
+
+# 44. Product Success Criteria
+
+The MVP is successful when a real event can complete the following lifecycle:
+
+```text
+1. Livara creates the customer and Album.
+2. Organizer receives management access.
+3. QR is prepared and placed at the event.
+4. Guests scan the QR without creating accounts.
+5. Guests view the shared Gallery.
+6. Guests upload photos and videos.
+7. Uploaded Media is processed and becomes available.
+8. Organizer moderates unwanted Media.
+9. Uploads close automatically according to the configured window.
+10. Gallery remains accessible.
+11. A later Upload Window may reopen contributions.
+12. Organizer downloads Media or requests an Album export.
+13. The Album remains as a preserved event memory.
+```
+
+If this complete experience works reliably for a real event, the core Livara MVP has achieved its primary goal.
+
+---
+
+# 45. Acceptance Criteria
+
+Livara MVP is product-complete when:
+
+- Super Admin can securely access administration
+- Super Admin can create Organizer accounts
+- Super Admin can create and assign Albums
+- Protected Album information can only be changed by authorized administration
+- Organizer can securely authenticate
+- Organizer can access only authorized Albums
+- Guest can enter through QR or shared link
+- Guest does not need traditional registration
+- Album is unlisted rather than publicly discoverable
+- Guest session works within the Album experience
+- Multiple Upload Windows are supported
+- Upload permission follows Upload Window state
+- Gallery remains available when uploads are closed
+- Guests can upload supported photos and videos
+- Media processing state is tracked
+- Media visibility is tracked separately from processing
+- Organizer can hide and restore Media
+- Organizer can safely delete Media
+- Organizer can download original Media
+- Organizer can request selected and full Album exports
+- Large exports can be processed asynchronously
+- Organizer can receive relevant notifications
+- Soft-deleted supported resources can be recovered during retention
+- Sensitive administrative actions can be audited
+- Mobile Guest experience is usable
+- Storage credentials and private infrastructure are never exposed
+- The complete workflow can be used at a real event
+
+---
+
+# 46. Product Principle
+
+Every product decision should support the central Livara promise:
+
+**Relive your event through every guest's eyes.**
+
+And the role of every participant:
+
+**Every guest becomes a storyteller.**
+
+The product succeeds when technology becomes invisible and the shared memory becomes the experience.
