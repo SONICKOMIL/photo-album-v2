@@ -9,21 +9,25 @@
   "scripts": {
     "dev:web": "npm run dev --workspace=@livara/web",
     "dev:api": "npm run dev --workspace=@livara/api",
+    "dev:worker": "npm run dev --workspace=@livara/worker",
 
     "build:web": "npm run build --workspace=@livara/web",
     "build:api": "npm run build --workspace=@livara/api",
+    "build:worker": "npm run build --workspace=@livara/worker",
 
     "lint:web": "npm run lint --workspace=@livara/web",
     "lint:api": "npm run lint --workspace=@livara/api",
+    "lint:worker": "npm run lint --workspace=@livara/worker",
 
     "typecheck:web": "npm run typecheck --workspace=@livara/web",
     "typecheck:api": "npm run typecheck --workspace=@livara/api",
+    "typecheck:worker": "npm run typecheck --workspace=@livara/worker",
 
     "test:api": "npm run test --workspace=@livara/api",
 
-    "build": "npm run build:web && npm run build:api",
-    "lint": "npm run lint:web && npm run lint:api",
-    "typecheck": "npm run typecheck:web && npm run typecheck:api",
+    "build": "npm run build:web && npm run build:api && npm run build:worker",
+    "lint": "npm run lint:web && npm run lint:api && npm run lint:worker",
+    "typecheck": "npm run typecheck:web && npm run typecheck:api && npm run typecheck:worker",
     "test": "npm run test:api"
   }
 }
