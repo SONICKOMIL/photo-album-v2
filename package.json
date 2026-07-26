@@ -14,20 +14,26 @@
     "build:web": "npm run build --workspace=@livara/web",
     "build:api": "npm run build --workspace=@livara/api",
     "build:worker": "npm run build --workspace=@livara/worker",
+    "build:config": "npm run build --workspace=@livara/config",
+    "build:shared": "npm run build --workspace=@livara/shared",
 
     "lint:web": "npm run lint --workspace=@livara/web",
     "lint:api": "npm run lint --workspace=@livara/api",
     "lint:worker": "npm run lint --workspace=@livara/worker",
+    "lint:config": "npm run lint --workspace=@livara/config",
+    "lint:shared": "npm run lint --workspace=@livara/shared",
 
     "typecheck:web": "npm run typecheck --workspace=@livara/web",
     "typecheck:api": "npm run typecheck --workspace=@livara/api",
     "typecheck:worker": "npm run typecheck --workspace=@livara/worker",
+    "typecheck:config": "npm run typecheck --workspace=@livara/config",
+    "typecheck:shared": "npm run typecheck --workspace=@livara/shared",
 
     "test:api": "npm run test --workspace=@livara/api",
 
-    "build": "npm run build:web && npm run build:api && npm run build:worker",
-    "lint": "npm run lint:web && npm run lint:api && npm run lint:worker",
-    "typecheck": "npm run typecheck:web && npm run typecheck:api && npm run typecheck:worker",
+    "build": "npm run build:config && npm run build:shared && npm run build:web && npm run build:api && npm run build:worker",
+    "lint": "npm run lint:config && npm run lint:shared && npm run lint:web && npm run lint:api && npm run lint:worker",
+    "typecheck": "npm run typecheck:config && npm run typecheck:shared && npm run typecheck:web && npm run typecheck:api && npm run typecheck:worker",
     "test": "npm run test:api"
   }
 }
