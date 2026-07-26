@@ -1,26 +1,18 @@
 {
-  "name": "photo-album-v2",
+  "name": "livara",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
-  },
-  "dependencies": {
-    "next": "16.2.11",
-    "react": "19.2.4",
-    "react-dom": "19.2.4"
-  },
-  "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.11",
-    "tailwindcss": "^4",
-    "typescript": "^5"
+    "dev:web": "npm run dev --workspace=@livara/web",
+    "build:web": "npm run build --workspace=@livara/web",
+    "lint:web": "npm run lint --workspace=@livara/web",
+    "typecheck:web": "npm run typecheck --workspace=@livara/web",
+    "build": "npm run build:web",
+    "lint": "npm run lint:web",
+    "typecheck": "npm run typecheck:web"
   }
 }
