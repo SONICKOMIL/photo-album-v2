@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@livara/config": "^0.1.0",
+    "@livara/shared": "^0.1.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.0.1",

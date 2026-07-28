@@ -1,0 +1,39 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: livara-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: livara
+      POSTGRES_USER: livara
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-livara}
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - livara_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U livara -d livara']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    container_name: livara-redis
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes']
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    volumes:
+      - livara_redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+volumes:
+  livara_postgres_data:
+  livara_redis_data:

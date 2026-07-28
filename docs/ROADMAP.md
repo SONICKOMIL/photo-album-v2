@@ -273,31 +273,35 @@ Cloudflare R2
 Tasks:
 
 ```text
-[ ] Configure PostgreSQL
-[ ] Configure Redis
-[ ] Configure local development infrastructure
-[ ] Configure environment variables
-[ ] Verify PostgreSQL connectivity
-[ ] Verify Redis connectivity
-[ ] Configure R2 development credentials
-[ ] Verify R2 connectivity
-[ ] Document local startup workflow
+[x] Configure PostgreSQL
+[x] Configure Redis
+[x] Configure local development infrastructure
+[x] Configure environment variables
+[x] Verify PostgreSQL connectivity
+[x] Verify Redis connectivity
+[x] Configure R2 development credentials
+[x] Verify R2 connectivity
+[x] Document local startup workflow
 ```
 
 Docker may be used for local PostgreSQL and Redis.
 
 Real secrets must remain outside Git.
 
+Local startup details: `docs/LOCAL_DEVELOPMENT.md`.
+
 ## Definition of Done
 
 ```text
-[ ] API can reach PostgreSQL
-[ ] API can reach Redis
-[ ] Worker can reach PostgreSQL
-[ ] Worker can reach Redis
-[ ] Backend can communicate with R2
-[ ] Local environment can be reproduced
+[x] API can reach PostgreSQL
+[x] API can reach Redis
+[x] Worker can reach PostgreSQL
+[x] Worker can reach Redis
+[x] Backend can communicate with R2
+[x] Local environment can be reproduced
 ```
+
+Runtime connectivity verified locally with Docker-backed PostgreSQL and Redis, and Cloudflare R2 using development credentials. Real secrets remain outside Git.
 
 ---
 

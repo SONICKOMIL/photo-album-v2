@@ -198,7 +198,8 @@ livara/
 │   ├── DATABASE.md
 │   ├── API.md
 │   ├── PROJECT_RULES.md
-│   └── ROADMAP.md
+│   ├── ROADMAP.md
+│   └── LOCAL_DEVELOPMENT.md
 │
 └── ...
 ```

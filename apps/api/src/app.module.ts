@@ -1,6 +1,12 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { getNodeEnvironment, getPort } from '@livara/config';
+import {
+  getDatabaseUrl,
+  getNodeEnvironment,
+  getOptionalR2Config,
+  getPort,
+  getRedisUrl,
+} from '@livara/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -9,6 +15,7 @@ import { AppService } from './app.service';
     ConfigModule.forRoot({
       isGlobal: true,
       cache: true,
+      envFilePath: ['.env', '../../.env'],
       validate: (environment: Record<string, unknown>) => {
         const nodeEnv =
           typeof environment.NODE_ENV === 'string'
@@ -20,10 +27,24 @@ import { AppService } from './app.service';
             ? environment.API_PORT
             : undefined;
 
+        const resolvedNodeEnv = getNodeEnvironment(nodeEnv);
+
+        if (resolvedNodeEnv === 'test') {
+          return {
+            ...environment,
+            NODE_ENV: resolvedNodeEnv,
+            API_PORT: getPort(apiPort, 3001, 'API_PORT'),
+            R2_CONFIG: null,
+          };
+        }
+
         return {
           ...environment,
-          NODE_ENV: getNodeEnvironment(nodeEnv),
+          NODE_ENV: resolvedNodeEnv,
           API_PORT: getPort(apiPort, 3001, 'API_PORT'),
+          DATABASE_URL: getDatabaseUrl(environment.DATABASE_URL),
+          REDIS_URL: getRedisUrl(environment.REDIS_URL),
+          R2_CONFIG: getOptionalR2Config(environment),
         };
       },
     }),

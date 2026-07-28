@@ -1,25 +1,32 @@
 {
-    "name": "@livara/shared",
-    "version": "0.1.0",
-    "private": true,
-    "type": "commonjs",
-    "main": "./dist/index.js",
-    "types": "./dist/index.d.ts",
-    "scripts": {
-      "build": "tsc -p tsconfig.build.json",
-      "typecheck": "tsc --noEmit",
-      "lint": "eslint \"src/**/*.ts\"",
-      "lint:fix": "eslint \"src/**/*.ts\" --fix"
-    },
-    "devDependencies": {
-      "@eslint/js": "^9.18.0",
-      "@types/node": "^24.0.0",
-      "eslint": "^9.18.0",
-      "eslint-config-prettier": "^10.0.1",
-      "eslint-plugin-prettier": "^5.2.2",
-      "globals": "^17.0.0",
-      "prettier": "^3.4.2",
-      "typescript": "^5.7.3",
-      "typescript-eslint": "^8.20.0"
-    }
+  "name": "@livara/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint \"src/**/*.ts\"",
+    "lint:fix": "eslint \"src/**/*.ts\" --fix"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.850.0",
+    "@livara/config": "^0.1.0",
+    "ioredis": "^5.6.1",
+    "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "@types/node": "^24.0.0",
+    "@types/pg": "^8.15.4",
+    "eslint": "^9.18.0",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-prettier": "^5.2.2",
+    "globals": "^17.0.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.20.0"
   }
+}

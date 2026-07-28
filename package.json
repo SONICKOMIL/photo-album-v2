@@ -8,8 +8,8 @@
   ],
   "scripts": {
     "dev:web": "npm run dev --workspace=@livara/web",
-    "dev:api": "npm run build:config && npm run dev --workspace=@livara/api",
-    "dev:worker": "npm run build:config && npm run dev --workspace=@livara/worker",
+    "dev:api": "npm run build:packages && npm run dev --workspace=@livara/api",
+    "dev:worker": "npm run build:packages && npm run dev --workspace=@livara/worker",
 
     "build:web": "npm run build --workspace=@livara/web",
     "build:api": "npm run build --workspace=@livara/api",
@@ -31,6 +31,12 @@
     "typecheck:shared": "npm run typecheck --workspace=@livara/shared",
 
     "test:api": "npm run test --workspace=@livara/api",
+
+    "infra:up": "docker compose up -d",
+    "infra:down": "docker compose down",
+    "infra:ps": "docker compose ps",
+    "infra:logs": "docker compose logs -f postgres redis",
+    "infra:verify": "npm run build:packages && node scripts/verify-infrastructure.js",
 
     "build": "npm run build:packages && npm run build:web && npm run build:api && npm run build:worker",
     "lint": "npm run lint:config && npm run lint:shared && npm run lint:web && npm run lint:api && npm run lint:worker",
