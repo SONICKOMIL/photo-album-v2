@@ -42,5 +42,8 @@ next-env.d.ts
 .DS_Store
 Thumbs.db
 
+# Manual MVP runtime data (temporary local persistence, uploads, QR artifacts)
+/data/
+
 # certificates / keys
 *.pem

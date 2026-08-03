@@ -9,6 +9,7 @@ import {
 } from '@livara/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { MvpModule } from './mvp/mvp.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { AppService } from './app.service';
         };
       },
     }),
+    MvpModule,
   ],
   controllers: [AppController],
   providers: [AppService],

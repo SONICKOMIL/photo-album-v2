@@ -32,6 +32,15 @@
 
     "test:api": "npm run test --workspace=@livara/api",
 
+    "mvp:album:create": "node scripts/mvp/cli.mjs album:create",
+    "mvp:album:list": "node scripts/mvp/cli.mjs album:list",
+    "mvp:album:url": "node scripts/mvp/cli.mjs album:url",
+    "mvp:uploads:open": "node scripts/mvp/cli.mjs uploads:open",
+    "mvp:uploads:close": "node scripts/mvp/cli.mjs uploads:close",
+    "mvp:media:list": "node scripts/mvp/cli.mjs media:list",
+    "mvp:media:delete": "node scripts/mvp/cli.mjs media:delete",
+    "mvp:qr": "node scripts/mvp/cli.mjs qr",
+
     "infra:up": "docker compose up -d",
     "infra:down": "docker compose down",
     "infra:ps": "docker compose ps",
@@ -42,5 +51,8 @@
     "lint": "npm run lint:config && npm run lint:shared && npm run lint:web && npm run lint:api && npm run lint:worker",
     "typecheck": "npm run build:packages && npm run typecheck:config && npm run typecheck:shared && npm run typecheck:web && npm run typecheck:api && npm run typecheck:worker",
     "test": "npm run test:api"
+  },
+  "devDependencies": {
+    "qrcode": "^1.5.4"
   }
 }
